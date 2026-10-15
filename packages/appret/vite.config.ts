@@ -10,6 +10,7 @@ export default defineConfig({
     target: "es2022",
     minify: false,
     sourcemap: true,
+    emptyOutDir: false,
     lib: {
       entry: entries,
       formats: ["es"],

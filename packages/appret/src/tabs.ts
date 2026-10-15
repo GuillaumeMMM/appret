@@ -1,7 +1,7 @@
 export interface TabsControllerOptions {
   tablist: HTMLElement;
   tabs: HTMLElement[];
-  panels: HTMLElement[];
+  tabpanels: HTMLElement[];
 }
 
 export class TabsController {
@@ -12,7 +12,7 @@ export class TabsController {
     this.host = host;
     this.#options = options;
 
-    console.log("construct tabs 4");
+    console.log("construct tabs 6");
   }
 
   destroy(): void {}
