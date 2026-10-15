@@ -12,13 +12,15 @@
 
   for (const host of document.querySelectorAll<HTMLElement>(".demo")) {
     new TabsController(host, {
-      tablist: host.querySelector('[data-appret-part~="tabs.list"]')!,
+      list: host.querySelector('[data-appret-part~="tabs.list"]')!,
       tabs: Array.from(
         host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.tab"]'),
       ),
-      tabpanels: Array.from(
+      panels: Array.from(
         host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.panel"]'),
       ),
+      label: "Choose a tab",
+      /*       activation: "manual", */
     });
   }
 </script>
