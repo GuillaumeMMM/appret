@@ -1,0 +1,14 @@
+{
+  "name": "appret-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/appret",
+    "docs"
+  ],
+  "scripts": {
+    "build:lib": "npm run build --workspace=packages/appret",
+    "docs:dev": "npm run dev --workspace=docs",
+    "docs:build": "npm run build --workspace=docs",
+    "build": "npm run build:lib && npm run docs:build"
+  }
+}
