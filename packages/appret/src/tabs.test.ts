@@ -1,0 +1,890 @@
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { TabsController, type TabsControllerOptions } from "./tabs.js";
+
+type Setup = {
+  count?: number;
+  tabTag?: "button" | "div";
+  disabled?: number[];
+  nativeDisabled?: number[];
+  dir?: "ltr" | "rtl";
+  options?: Partial<TabsControllerOptions>;
+};
+
+let controllers: TabsController[] = [];
+
+function setup({
+  count = 3,
+  tabTag = "button",
+  disabled = [],
+  nativeDisabled = [],
+  dir,
+  options = {},
+}: Setup = {}) {
+  const host = document.createElement("div");
+  const list = document.createElement("div");
+  const tabs: HTMLElement[] = [];
+  const panels: HTMLElement[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const tab = document.createElement(tabTag);
+    tab.textContent = `Tab ${i + 1}`;
+    if (disabled.includes(i)) tab.setAttribute("aria-disabled", "true");
+    if (nativeDisabled.includes(i)) tab.setAttribute("disabled", "");
+    list.append(tab);
+    tabs.push(tab);
+
+    const panel = document.createElement("section");
+    panel.textContent = `Panel ${i + 1}`;
+    panels.push(panel);
+  }
+
+  if (dir) host.dir = dir;
+  host.append(list, ...panels);
+  document.body.append(host);
+
+  const controller = new TabsController(host, {
+    list,
+    tabs,
+    panels,
+    label: "Sections",
+    ...options,
+  } as TabsControllerOptions);
+  controllers.push(controller);
+
+  return { host, list, tabs, panels, controller };
+}
+
+function press(key: string): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", {
+    key,
+    bubbles: true,
+    cancelable: true,
+  });
+  document.activeElement!.dispatchEvent(event);
+  return event;
+}
+
+function expectSelected(
+  tabs: HTMLElement[],
+  panels: HTMLElement[],
+  index: number,
+) {
+  tabs.forEach((tab, i) => {
+    expect(tab.getAttribute("aria-selected")).toBe(String(i === index));
+  });
+  panels.forEach((panel, i) => {
+    expect(panel.hidden).toBe(i !== index);
+  });
+}
+
+afterEach(() => {
+  for (const controller of controllers) {
+    controller.destroy();
+  }
+  controllers = [];
+  document.body.innerHTML = "";
+});
+
+describe("roles, states and properties", () => {
+  it("gives the container the tablist role", () => {
+    const { list } = setup();
+    expect(list.getAttribute("role")).toBe("tablist");
+  });
+
+  it("gives each tab the tab role, inside the tablist", () => {
+    const { list, tabs } = setup();
+    for (const tab of tabs) {
+      expect(tab.getAttribute("role")).toBe("tab");
+      expect(list.contains(tab)).toBe(true);
+    }
+  });
+
+  it("gives each panel the tabpanel role", () => {
+    const { panels } = setup();
+    for (const panel of panels) {
+      expect(panel.getAttribute("role")).toBe("tabpanel");
+    }
+  });
+
+  it("labels the tablist with aria-label when there is no visible label", () => {
+    const { list } = setup({ options: { label: "Account settings" } });
+    expect(list.getAttribute("aria-label")).toBe("Account settings");
+  });
+
+  it("labels the tablist with aria-labelledby when there is a visible label", () => {
+    const heading = document.createElement("h2");
+    heading.id = "settings-heading";
+    heading.textContent = "Settings";
+    document.body.append(heading);
+
+    const { list } = setup({
+      options: { label: undefined, labelledBy: "settings-heading" },
+    });
+    expect(list.getAttribute("aria-labelledby")).toBe("settings-heading");
+    expect(list.hasAttribute("aria-label")).toBe(false);
+  });
+
+  it("points each tab's aria-controls at its panel", () => {
+    const { tabs, panels } = setup();
+    tabs.forEach((tab, i) => {
+      const id = tab.getAttribute("aria-controls");
+      expect(id).toBeTruthy();
+      expect(document.getElementById(id!)).toBe(panels[i]);
+    });
+  });
+
+  it("keeps ids the author already set", () => {
+    const host = document.createElement("div");
+    host.innerHTML = `
+      <div class="list"><button id="t1">One</button><button id="t2">Two</button></div>
+      <section id="p1">One</section><section id="p2">Two</section>`;
+    document.body.append(host);
+    const tabs = [...host.querySelectorAll<HTMLElement>("button")];
+    const panels = [...host.querySelectorAll<HTMLElement>("section")];
+    controllers.push(
+      new TabsController(host, {
+        list: host.querySelector(".list")!,
+        tabs,
+        panels,
+        label: "Sections",
+      }),
+    );
+
+    expect(tabs.map((t) => t.getAttribute("aria-controls"))).toEqual([
+      "p1",
+      "p2",
+    ]);
+    expect(panels.map((p) => p.getAttribute("aria-labelledby"))).toEqual([
+      "t1",
+      "t2",
+    ]);
+  });
+
+  it("points each panel's aria-labelledby at its tab", () => {
+    const { tabs, panels } = setup();
+    panels.forEach((panel, i) => {
+      const id = panel.getAttribute("aria-labelledby");
+      expect(id).toBeTruthy();
+      expect(document.getElementById(id!)).toBe(tabs[i]);
+    });
+  });
+
+  it("sets aria-selected true on the active tab and false on the others", () => {
+    const { tabs, panels } = setup();
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("moves aria-selected when another tab is clicked", () => {
+    const { tabs, panels } = setup();
+    tabs[1]!.click();
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("sets aria-orientation to vertical for a vertical tablist", () => {
+    const { list } = setup({ options: { orientation: "vertical" } });
+    expect(list.getAttribute("aria-orientation")).toBe("vertical");
+  });
+
+  it("leaves aria-orientation unset by default (horizontal)", () => {
+    const { list } = setup();
+    expect(list.hasAttribute("aria-orientation")).toBe(false);
+  });
+
+  it("keeps an author-set aria-haspopup on a tab", () => {
+    const host = document.createElement("div");
+    host.innerHTML = `
+      <div class="list"><button aria-haspopup="menu">One</button><button>Two</button></div>
+      <section>One</section><section>Two</section>`;
+    document.body.append(host);
+    const tabs = [...host.querySelectorAll<HTMLElement>("button")];
+    controllers.push(
+      new TabsController(host, {
+        list: host.querySelector(".list")!,
+        tabs,
+        panels: [...host.querySelectorAll<HTMLElement>("section")],
+        label: "Sections",
+      }),
+    );
+    expect(tabs[0]!.getAttribute("aria-haspopup")).toBe("menu");
+  });
+
+  it("makes only the active tab reachable with Tab (roving tabindex)", () => {
+    const { tabs } = setup();
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual([
+      "0",
+      "-1",
+      "-1",
+    ]);
+  });
+
+  it("makes panels focusable so Tab moves from the tablist into the panel", () => {
+    const { panels } = setup();
+    for (const panel of panels) {
+      expect(panel.getAttribute("tabindex")).toBe("0");
+    }
+  });
+});
+
+describe("keyboard: automatic activation", () => {
+  it("Right Arrow moves focus to the next tab and selects it", () => {
+    const { tabs, panels } = setup();
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("Right Arrow on the last tab wraps to the first", () => {
+    const { tabs, panels } = setup();
+    tabs[2]!.click();
+    tabs[2]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("Left Arrow moves focus to the previous tab and selects it", () => {
+    const { tabs, panels } = setup();
+    tabs[1]!.click();
+    tabs[1]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("Left Arrow on the first tab wraps to the last", () => {
+    const { tabs, panels } = setup();
+    tabs[0]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[2]);
+    expectSelected(tabs, panels, 2);
+  });
+
+  it("Home moves focus to the first tab", () => {
+    const { tabs, panels } = setup();
+    tabs[2]!.click();
+    tabs[2]!.focus();
+    press("Home");
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("End moves focus to the last tab", () => {
+    const { tabs, panels } = setup();
+    tabs[0]!.focus();
+    press("End");
+    expect(document.activeElement).toBe(tabs[2]);
+    expectSelected(tabs, panels, 2);
+  });
+
+  it("prevents the default action of the keys it handles", () => {
+    const { tabs } = setup();
+    tabs[0]!.focus();
+    for (const key of ["ArrowRight", "ArrowLeft", "Home", "End"]) {
+      expect(press(key).defaultPrevented).toBe(true);
+    }
+  });
+
+  describe("vertical tablist", () => {
+    it("Down Arrow performs as Right Arrow", () => {
+      const { tabs, panels } = setup({ options: { orientation: "vertical" } });
+      tabs[0]!.focus();
+      press("ArrowDown");
+      expect(document.activeElement).toBe(tabs[1]);
+      expectSelected(tabs, panels, 1);
+    });
+
+    it("Up Arrow performs as Left Arrow", () => {
+      const { tabs, panels } = setup({ options: { orientation: "vertical" } });
+      tabs[0]!.focus();
+      press("ArrowUp");
+      expect(document.activeElement).toBe(tabs[2]);
+      expectSelected(tabs, panels, 2);
+    });
+  });
+});
+
+describe("keyboard: manual activation", () => {
+  it("arrow keys move focus without changing the selection", () => {
+    const { tabs, panels } = setup({ options: { activation: "manual" } });
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("Home and End move focus without changing the selection", () => {
+    const { tabs, panels } = setup({ options: { activation: "manual" } });
+    tabs[0]!.focus();
+    press("End");
+    expect(document.activeElement).toBe(tabs[2]);
+    press("Home");
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("keeps tabindex=0 on the selected tab while focus moves", () => {
+    const { tabs } = setup({ options: { activation: "manual" } });
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual([
+      "0",
+      "-1",
+      "-1",
+    ]);
+  });
+
+  it.each(["Enter", " "])("%j activates the focused tab", (key) => {
+    const { tabs, panels } = setup({
+      tabTag: "div",
+      options: { activation: "manual" },
+    });
+    tabs[0]!.focus();
+    press("ArrowRight");
+    const event = press(key);
+    expect(event.defaultPrevented).toBe(true);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("button tabs activate through their native click", () => {
+    // In a browser, Enter/Space on a <button> fire click; jsdom doesn't, so click directly.
+    const { tabs, panels } = setup({ options: { activation: "manual" } });
+    tabs[0]!.focus();
+    press("ArrowRight");
+    tabs[1]!.click();
+    expectSelected(tabs, panels, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Behaviours beyond the APG pattern
+// ---------------------------------------------------------------------------
+
+describe("disabled tabs", () => {
+  it("Right Arrow skips an aria-disabled tab", () => {
+    const { tabs, panels } = setup({ disabled: [1] });
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[2]);
+    expectSelected(tabs, panels, 2);
+  });
+
+  it("Left Arrow skips an aria-disabled tab", () => {
+    const { tabs, panels } = setup({ disabled: [1] });
+    tabs[2]!.click();
+    tabs[2]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("skips disabled tabs when wrapping around", () => {
+    const { tabs, panels } = setup({ count: 4, disabled: [0] });
+    tabs[3]!.click();
+    tabs[3]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("skips natively disabled <button> tabs", () => {
+    const { tabs, panels } = setup({ nativeDisabled: [1] });
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[2]);
+    expectSelected(tabs, panels, 2);
+  });
+
+  it("Home goes to the first enabled tab", () => {
+    const { tabs, panels } = setup({ count: 4, disabled: [0] });
+    tabs[3]!.click();
+    tabs[3]!.focus();
+    press("Home");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("End goes to the last enabled tab", () => {
+    const { tabs, panels } = setup({ count: 4, disabled: [3] });
+    tabs[0]!.focus();
+    press("End");
+    expect(document.activeElement).toBe(tabs[2]);
+    expectSelected(tabs, panels, 2);
+  });
+
+  it("ignores clicks on an aria-disabled tab", () => {
+    const { tabs, panels } = setup({ disabled: [1] });
+    tabs[1]!.click();
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("ignores Enter on a disabled tab in manual mode", () => {
+    const { tabs, panels } = setup({
+      tabTag: "div",
+      options: { activation: "manual" },
+    });
+    tabs[1]!.setAttribute("aria-disabled", "true");
+    tabs[1]!.focus();
+    press("Enter");
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("starts on the first enabled tab when the first tab is disabled", () => {
+    const { tabs, panels } = setup({ disabled: [0] });
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("does nothing on arrow keys when every tab is disabled", () => {
+    const { tabs, panels } = setup({ disabled: [0, 1, 2] });
+    tabs[0]!.focus();
+    const event = press("ArrowRight");
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("picks up aria-disabled changes made after setup", () => {
+    const { tabs, panels } = setup();
+    tabs[1]!.setAttribute("aria-disabled", "true");
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[2]);
+
+    tabs[1]!.removeAttribute("aria-disabled");
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+});
+
+describe("right-to-left", () => {
+  it("Left Arrow moves to the next tab", () => {
+    const { tabs, panels } = setup({ dir: "rtl" });
+    tabs[0]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("Right Arrow moves to the previous tab", () => {
+    const { tabs, panels } = setup({ dir: "rtl" });
+    tabs[1]!.click();
+    tabs[1]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("does not swap Up and Down in a vertical tablist", () => {
+    const { tabs } = setup({
+      dir: "rtl",
+      options: { orientation: "vertical" },
+    });
+    tabs[0]!.focus();
+    press("ArrowDown");
+    expect(document.activeElement).toBe(tabs[1]);
+    press("ArrowUp");
+    expect(document.activeElement).toBe(tabs[0]);
+  });
+
+  it("swaps Left and Right in a vertical tablist too", () => {
+    const { tabs } = setup({
+      dir: "rtl",
+      options: { orientation: "vertical" },
+    });
+    tabs[0]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[1]);
+  });
+
+  it("does not change Home and End", () => {
+    const { tabs } = setup({ dir: "rtl" });
+    tabs[1]!.focus();
+    press("Home");
+    expect(document.activeElement).toBe(tabs[0]);
+    press("End");
+    expect(document.activeElement).toBe(tabs[2]);
+  });
+
+  it("follows a direction change made after setup", () => {
+    const { host, tabs } = setup();
+    host.dir = "rtl";
+    tabs[0]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[1]);
+  });
+});
+
+describe("errors and warnings", () => {
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  beforeAll(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockClear();
+  });
+  afterAll(() => {
+    warn.mockRestore();
+  });
+
+  function make(options: Partial<TabsControllerOptions>, markup?: string) {
+    const host = document.createElement("div");
+    host.innerHTML =
+      markup ??
+      `<div class="list"><button>One</button><button>Two</button></div>
+       <section>One</section><section>Two</section>`;
+    document.body.append(host);
+    const controller = new TabsController(host, {
+      list: host.querySelector<HTMLElement>(".list")!,
+      tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
+      panels: [...host.querySelectorAll<HTMLElement>("section")],
+      ...options,
+    } as TabsControllerOptions);
+    controllers.push(controller);
+    return { host, controller };
+  }
+
+  it("throws when there are no tabs", () => {
+    expect(() => make({}, `<div class="list"></div>`)).toThrow(
+      "Appret tabs: no tabs found.",
+    );
+  });
+
+  it("throws when tabs and panels have different lengths", () => {
+    expect(() =>
+      make(
+        { label: "Sections" },
+        `<div class="list"><button>One</button><button>Two</button></div><section>One</section>`,
+      ),
+    ).toThrow("Appret tabs: tabs and panels must be the same length.");
+  });
+
+  it("changes nothing in the markup when it throws", () => {
+    const host = document.createElement("div");
+    host.innerHTML = `<div class="list"><button>One</button></div>`;
+    const before = host.innerHTML;
+    expect(
+      () =>
+        new TabsController(host, {
+          list: host.querySelector<HTMLElement>(".list")!,
+          tabs: [host.querySelector("button")!],
+          panels: [],
+          label: "Sections",
+        }),
+    ).toThrow();
+    expect(host.innerHTML).toBe(before);
+  });
+
+  it("warns about tabs that aren't inside the list", () => {
+    const host = document.createElement("div");
+    host.innerHTML = `
+      <div class="list"><button>One</button></div><button class="stray">Two</button>
+      <section>One</section><section>Two</section>`;
+    document.body.append(host);
+    const list = host.querySelector<HTMLElement>(".list")!;
+    const stray = host.querySelector<HTMLElement>(".stray")!;
+    controllers.push(
+      new TabsController(host, {
+        list,
+        tabs: [list.querySelector("button")!, stray],
+        panels: [...host.querySelectorAll<HTMLElement>("section")],
+        label: "Sections",
+      }),
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: these tabs aren't inside `list`:",
+      [stray],
+    );
+  });
+
+  it("warns when initialSelectedTab isn't one of the tabs", () => {
+    make({
+      label: "Sections",
+      initialSelectedTab: document.createElement("button"),
+    });
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: the initial selected tab is not among tabs.",
+    );
+  });
+
+  it("warns when the tablist has no accessible label", () => {
+    make({});
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: the tablist is missing an accessible label.",
+    );
+  });
+
+  it("doesn't warn when the markup already labels the tablist", () => {
+    make(
+      {},
+      `<div class="list" aria-label="Sections"><button>One</button><button>Two</button></div>
+       <section>One</section><section>Two</section>`,
+    );
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("warns about labelledBy ids that don't exist in the tablist's root", () => {
+    const heading = document.createElement("h2");
+    heading.id = "real-heading";
+    document.body.append(heading);
+    make({ labelledBy: " real-heading missing-heading " });
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: ID missing in the tablist's document or shadow root:",
+      ["missing-heading"],
+    );
+  });
+
+  it("doesn't warn for a working setup", () => {
+    make({ label: "Sections" });
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+// jsdom doesn't implement ARIA element reflection (ariaLabelledByElements...),
+// so install a stand-in that follows the browser rule: an element can only
+// reference elements in its own root or in an outer (shadow-including ancestor) root.
+function installAriaElementReflection() {
+  const properties = {
+    ariaLabelledByElements: "aria-labelledby",
+    ariaDescribedByElements: "aria-describedby",
+    ariaControlsElements: "aria-controls",
+  } as const;
+  const stored = new WeakMap<Element, Map<string, Element[]>>();
+
+  const isReachable = (from: Element, target: Element) => {
+    for (
+      let root: Node | null = from.getRootNode();
+      root;
+      root = root instanceof ShadowRoot ? root.host.getRootNode() : null
+    ) {
+      if (target.getRootNode() === root) return true;
+    }
+    return false;
+  };
+
+  for (const [property, attribute] of Object.entries(properties)) {
+    Object.defineProperty(Element.prototype, property, {
+      configurable: true,
+      get(this: Element) {
+        const elements = stored.get(this)?.get(property);
+        return elements ? elements.filter((el) => isReachable(this, el)) : null;
+      },
+      set(this: Element, value: Element[] | null) {
+        let map = stored.get(this);
+        if (!map) stored.set(this, (map = new Map()));
+        if (value === null) {
+          map.delete(property);
+          this.removeAttribute(attribute);
+        } else {
+          map.set(property, [...value]);
+          this.setAttribute(attribute, "");
+        }
+      },
+    });
+  }
+
+  return () => {
+    for (const property of Object.keys(properties)) {
+      delete (Element.prototype as unknown as Record<string, unknown>)[
+        property
+      ];
+    }
+  };
+}
+
+describe("labelledByElements", () => {
+  let uninstall: () => void;
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  beforeAll(() => {
+    uninstall = installAriaElementReflection();
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockClear();
+  });
+  afterAll(() => {
+    warn.mockRestore();
+    uninstall();
+  });
+
+  it("labels the tablist with the given elements, in order", () => {
+    const title = document.createElement("h2");
+    const subtitle = document.createElement("p");
+    document.body.append(title, subtitle);
+    const { list } = setup({
+      options: { label: undefined, labelledByElements: [title, subtitle] },
+    });
+    expect(list.ariaLabelledByElements).toEqual([title, subtitle]);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("works for a tablist in a shadow root labelled from the page", () => {
+    const heading = document.createElement("h2");
+    const component = document.createElement("div");
+    document.body.append(heading, component);
+    const root = component.attachShadow({ mode: "open" });
+    root.innerHTML = `<div class="list"><button>One</button></div><section>One</section>`;
+    const list = root.querySelector<HTMLElement>(".list")!;
+
+    controllers.push(
+      new TabsController(component, {
+        list,
+        tabs: [root.querySelector("button")!],
+        panels: [root.querySelector("section")!],
+        labelledByElements: [heading],
+      }),
+    );
+    expect(list.ariaLabelledByElements).toEqual([heading]);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("warns about labels inside a shadow root the tablist can't see", () => {
+    const other = document.createElement("div");
+    document.body.append(other);
+    const hidden = document.createElement("h2");
+    other.attachShadow({ mode: "open" }).append(hidden);
+    const visible = document.createElement("h2");
+    document.body.append(visible);
+
+    setup({
+      options: { label: undefined, labelledByElements: [visible, hidden] },
+    });
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: these labelledByElements can't label the tablist because they're inside another shadow root:",
+      [hidden],
+    );
+  });
+});
+
+describe("tabs passed through slots", () => {
+  let uninstall: () => void;
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  beforeAll(() => {
+    uninstall = installAriaElementReflection();
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockClear();
+  });
+  afterAll(() => {
+    warn.mockRestore();
+    uninstall();
+  });
+
+  // <my-tabs>
+  //   <button slot="tab">  ← light DOM (page)
+  //   #shadow-root
+  //     <div class="list"><slot name="tab"></div>
+  //     <section> panels   ← shadow root
+  function slottedTabs(count = 3) {
+    const component = document.createElement("div");
+    const tabs: HTMLElement[] = [];
+    for (let i = 0; i < count; i++) {
+      const tab = document.createElement("button");
+      tab.slot = "tab";
+      tab.textContent = `Tab ${i + 1}`;
+      tabs.push(tab);
+    }
+    component.append(...tabs);
+    document.body.append(component);
+
+    const root = component.attachShadow({ mode: "open" });
+    root.innerHTML = `<div class="list"><slot name="tab"></slot></div>`;
+    const panels = tabs.map((_, i) => {
+      const panel = document.createElement("section");
+      panel.textContent = `Panel ${i + 1}`;
+      root.append(panel);
+      return panel;
+    });
+    const list = root.querySelector<HTMLElement>(".list")!;
+
+    controllers.push(
+      new TabsController(component, { list, tabs, panels, label: "Sections" }),
+    );
+    return { component, root, list, tabs, panels };
+  }
+
+  it("treats slotted tabs as inside the list", () => {
+    const { tabs } = slottedTabs();
+    expect(warn).not.toHaveBeenCalled();
+    for (const tab of tabs) expect(tab.getAttribute("role")).toBe("tab");
+  });
+
+  it("labels each panel with its slotted tab through element references", () => {
+    const { tabs, panels } = slottedTabs();
+    panels.forEach((panel, i) => {
+      expect(panel.ariaLabelledByElements).toEqual([tabs[i]]);
+    });
+  });
+
+  it("supports the keyboard across slotted tabs", () => {
+    const { tabs, panels } = slottedTabs();
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("uses plain ids when tabs and panels are both slotted", () => {
+    const component = document.createElement("div");
+    component.innerHTML = `
+      <button slot="tab">One</button><button slot="tab">Two</button>
+      <section slot="panel">One</section><section slot="panel">Two</section>`;
+    document.body.append(component);
+    const root = component.attachShadow({ mode: "open" });
+    root.innerHTML = `<div class="list"><slot name="tab"></slot></div><slot name="panel"></slot>`;
+    const tabs = [...component.querySelectorAll<HTMLElement>("button")];
+    const panels = [...component.querySelectorAll<HTMLElement>("section")];
+
+    controllers.push(
+      new TabsController(component, {
+        list: root.querySelector<HTMLElement>(".list")!,
+        tabs,
+        panels,
+        label: "Sections",
+      }),
+    );
+    tabs.forEach((tab, i) => {
+      expect(tab.getAttribute("aria-controls")).toBe(panels[i]!.id);
+      expect(panels[i]!.getAttribute("aria-labelledby")).toBe(tab.id);
+    });
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("warns when a panel can't reference its tab", () => {
+    // Panel in the page, tab inside a nested shadow root: the panel can't see it.
+    const host = document.createElement("div");
+    const list = document.createElement("div");
+    const wrapper = document.createElement("div");
+    list.append(wrapper);
+    const tab = document.createElement("button");
+    wrapper.attachShadow({ mode: "open" }).append(tab);
+    const panel = document.createElement("section");
+    host.append(list, panel);
+    document.body.append(host);
+
+    controllers.push(
+      new TabsController(host, {
+        list,
+        tabs: [tab],
+        panels: [panel],
+        label: "Sections",
+      }),
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: this panel can't be labelled by its tab, because the tab is inside a shadow root the panel can't see:",
+      panel,
+    );
+  });
+});

@@ -1,16 +1,77 @@
-<div class="demo">
+Default
+
+<div class="demo-default">
   <div data-appret-part="tabs.list">
     <button data-appret-part="tabs.tab">Profile</button>
     <button data-appret-part="tabs.tab">Billing</button>
+    <button data-appret-part="tabs.tab">About</button>
   </div>
   <section data-appret-part="tabs.panel">Profile panel</section>
   <section data-appret-part="tabs.panel">Billing panel</section>
+  <section data-appret-part="tabs.panel">About panel</section>
+</div>
+
+Disabled
+
+<div class="demo-disabled">
+  <div data-appret-part="tabs.list">
+    <button data-appret-part="tabs.tab" disabled>Profile</button>
+    <button data-appret-part="tabs.tab">Billing</button>
+    <button data-appret-part="tabs.tab" disabled>About</button>
+    <button data-appret-part="tabs.tab">Contact</button>
+  </div>
+  <section data-appret-part="tabs.panel">Profile panel</section>
+  <section data-appret-part="tabs.panel">Billing panel</section>
+  <section data-appret-part="tabs.panel">About panel</section>
+  <section data-appret-part="tabs.panel">Contact panel</section>
+</div>
+
+Vertical
+
+<div class="demo-vertical" style="display: flex; flex-wrap: wrap;">
+  <div
+    data-appret-part="tabs.list"
+    style="display: flex; flex-direction: column;"
+  >
+    <button data-appret-part="tabs.tab">Profile</button>
+    <button data-appret-part="tabs.tab">Billing</button>
+    <button data-appret-part="tabs.tab">About</button>
+  </div>
+  <section data-appret-part="tabs.panel">Profile panel</section>
+  <section data-appret-part="tabs.panel">Billing panel</section>
+  <section data-appret-part="tabs.panel">About panel</section>
+</div>
+
+Manual
+
+<div class="demo-manual">
+  <div data-appret-part="tabs.list">
+    <button data-appret-part="tabs.tab">Profile</button>
+    <button data-appret-part="tabs.tab">Billing</button>
+    <button data-appret-part="tabs.tab">About</button>
+  </div>
+  <section data-appret-part="tabs.panel">Profile panel</section>
+  <section data-appret-part="tabs.panel">Billing panel</section>
+  <section data-appret-part="tabs.panel">About panel</section>
+</div>
+
+Right to left
+
+<div class="demo-rtl" dir="rtl" lang="ar">
+  <div data-appret-part="tabs.list">
+    <button data-appret-part="tabs.tab">الملف الشخصي</button>
+    <button data-appret-part="tabs.tab">الفوترة</button>
+    <button data-appret-part="tabs.tab">حول</button>
+  </div>
+  <section data-appret-part="tabs.panel">لوحة الملف الشخصي</section>
+  <section data-appret-part="tabs.panel">لوحة الفوترة</section>
+  <section data-appret-part="tabs.panel">لوحة حول</section>
 </div>
 
 <script>
   import { TabsController } from "appret/tabs";
 
-  for (const host of document.querySelectorAll<HTMLElement>(".demo")) {
+  for (const host of document.querySelectorAll<HTMLElement>(".demo-default")) {
     new TabsController(host, {
       list: host.querySelector('[data-appret-part~="tabs.list"]')!,
       tabs: Array.from(
@@ -20,7 +81,60 @@
         host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.panel"]'),
       ),
       label: "Choose a tab",
-      /*       activation: "manual", */
+    });
+  }
+
+  for (const host of document.querySelectorAll<HTMLElement>(".demo-disabled")) {
+    new TabsController(host, {
+      list: host.querySelector('[data-appret-part~="tabs.list"]')!,
+      tabs: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.tab"]'),
+      ),
+      panels: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.panel"]'),
+      ),
+      label: "Choose a tab",
+    });
+  }
+
+  for (const host of document.querySelectorAll<HTMLElement>(".demo-vertical")) {
+    new TabsController(host, {
+      list: host.querySelector('[data-appret-part~="tabs.list"]')!,
+      tabs: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.tab"]'),
+      ),
+      panels: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.panel"]'),
+      ),
+      label: "Choose a tab",
+      orientation: "vertical",
+    });
+  }
+
+  for (const host of document.querySelectorAll<HTMLElement>(".demo-manual")) {
+    new TabsController(host, {
+      list: host.querySelector('[data-appret-part~="tabs.list"]')!,
+      tabs: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.tab"]'),
+      ),
+      panels: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.panel"]'),
+      ),
+      label: "Choose a tab",
+      activation: "manual",
+    });
+  }
+
+  for (const host of document.querySelectorAll<HTMLElement>(".demo-rtl")) {
+    new TabsController(host, {
+      list: host.querySelector('[data-appret-part~="tabs.list"]')!,
+      tabs: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.tab"]'),
+      ),
+      panels: Array.from(
+        host.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.panel"]'),
+      ),
+      label: "Choose a tab",
     });
   }
 </script>

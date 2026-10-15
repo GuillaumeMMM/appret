@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=packages/appret & npm run docs:dev",
     "lib:dev": "npm run dev --workspace=packages/appret",
+    "test": "npm run test --workspace=packages/appret",
     "build:lib": "npm run build --workspace=packages/appret",
     "docs:dev": "npm run dev --workspace=docs",
     "docs:build": "npm run build --workspace=docs",
