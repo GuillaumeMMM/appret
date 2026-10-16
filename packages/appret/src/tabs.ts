@@ -15,6 +15,7 @@ export type TabsControllerOptions = {
     orientation?: "horizontal" | "vertical";
     initialSelectedTab?: HTMLElement;
     activation?: "manual" | "automatic";
+    loop?: boolean;
   };
 
 export class TabsController {
@@ -71,6 +72,10 @@ export class TabsController {
 
     for (const tab of this.#options.tabs) {
       this.#attributeRecorder.set(tab, "role", "tab");
+
+      if (tab instanceof HTMLButtonElement && !tab.hasAttribute("type")) {
+        this.#attributeRecorder.set(tab, "type", "button");
+      }
     }
     for (const panel of this.#options.panels) {
       this.#attributeRecorder.set(panel, "role", "tabpanel");
@@ -226,10 +231,17 @@ export class TabsController {
     for (const [i, tab] of tabs.entries()) {
       tab.addEventListener(
         "click",
-        () => {
+        (e) => {
+          if (e.defaultPrevented) {
+            return;
+          }
+
           if (!this.#isDisabled(tab)) {
             this.#setSelectedTab(tab);
           }
+
+          //  Force the focus for Safari
+          tab.focus();
         },
         { signal: this.#abort.signal },
       );
@@ -237,7 +249,11 @@ export class TabsController {
       tab.addEventListener(
         "keydown",
         (e: KeyboardEvent) => {
-          if (e.altKey || e.ctrlKey || e.metaKey) {
+          if (e.defaultPrevented) {
+            return;
+          }
+
+          if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) {
             return;
           }
 
@@ -310,11 +326,26 @@ export class TabsController {
   }
 
   #findEnabledTab(currentIndex: number, step: 1 | -1): HTMLElement | undefined {
-    const { tabs } = this.#options;
+    const { tabs, loop } = this.#options;
+
     for (let i = 1; i <= tabs.length; i++) {
-      const tab = tabs[(currentIndex + step * i + tabs.length) % tabs.length]!;
-      if (!this.#isDisabled(tab)) return tab;
+      let index = currentIndex + step * i;
+
+      if (index < 0 || index >= tabs.length) {
+        if (loop === false) {
+          return tabs[currentIndex];
+        }
+
+        index = (index + tabs.length) % tabs.length;
+      }
+
+      const tab = tabs[index]!;
+
+      if (!this.#isDisabled(tab)) {
+        return tab;
+      }
     }
+
     return undefined;
   }
 

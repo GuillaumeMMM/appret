@@ -1,4 +1,10 @@
-type AttributeName = "role" | "id" | "tabindex" | "hidden" | `aria-${string}`;
+type AttributeName =
+  | "role"
+  | "id"
+  | "tabindex"
+  | "hidden"
+  | `aria-${string}`
+  | "type";
 
 const reflectedAttribute = {
   ariaLabelledByElements: "aria-labelledby",

@@ -523,6 +523,102 @@ describe("right-to-left", () => {
   });
 });
 
+describe("loop: false", () => {
+  it("Right Arrow on the last tab stays on it", () => {
+    const { tabs, panels } = setup({ options: { loop: false } });
+    tabs[2]!.click();
+    tabs[2]!.focus();
+    const event = press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[2]);
+    expectSelected(tabs, panels, 2);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("Left Arrow on the first tab stays on it", () => {
+    const { tabs, panels } = setup({ options: { loop: false } });
+    tabs[0]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[0]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("still moves between tabs that aren't at an edge", () => {
+    const { tabs, panels } = setup({ options: { loop: false } });
+    tabs[0]!.focus();
+    press("ArrowRight");
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[2]);
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("doesn't wrap when the remaining tabs before the edge are disabled", () => {
+    const { tabs, panels } = setup({ disabled: [2], options: { loop: false } });
+    tabs[1]!.click();
+    tabs[1]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("doesn't wrap backwards past disabled tabs at the start", () => {
+    const { tabs, panels } = setup({ disabled: [0], options: { loop: false } });
+    tabs[1]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[1]);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("stops at the edges of a vertical tablist", () => {
+    const { tabs } = setup({
+      options: { loop: false, orientation: "vertical" },
+    });
+    tabs[0]!.focus();
+    press("ArrowUp");
+    expect(document.activeElement).toBe(tabs[0]);
+    tabs[2]!.focus();
+    press("ArrowDown");
+    expect(document.activeElement).toBe(tabs[2]);
+  });
+
+  it("stops at the edges in right-to-left", () => {
+    const { tabs } = setup({ dir: "rtl", options: { loop: false } });
+    tabs[2]!.focus();
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(tabs[2]);
+    tabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[0]);
+  });
+
+  it("doesn't change Home and End", () => {
+    const { tabs } = setup({ options: { loop: false } });
+    tabs[1]!.focus();
+    press("End");
+    expect(document.activeElement).toBe(tabs[2]);
+    press("Home");
+    expect(document.activeElement).toBe(tabs[0]);
+  });
+
+  it("stops focus at the edges in manual mode", () => {
+    const { tabs, panels } = setup({
+      options: { loop: false, activation: "manual" },
+    });
+    tabs[2]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[2]);
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("wraps by default", () => {
+    const { tabs } = setup();
+    tabs[2]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(tabs[0]);
+  });
+});
+
 describe("errors and warnings", () => {
   let warn: ReturnType<typeof vi.spyOn>;
 
