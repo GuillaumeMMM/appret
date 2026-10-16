@@ -60,8 +60,7 @@ export class TabsController {
     this.#setFocusablePanels();
     this.#setTabPanelLink();
     this.#setLabels();
-    this.#setOtherOptions();
-
+    this.#setOrientation();
     this.#setListeners();
 
     this.#setSelectedTab(this.#selectedTab);
@@ -181,7 +180,7 @@ export class TabsController {
     }
   }
 
-  #setOtherOptions() {
+  #setOrientation() {
     if (this.#options.orientation) {
       this.#attributeRecorder.set(
         this.#options.list,
