@@ -619,6 +619,402 @@ describe("loop: false", () => {
   });
 });
 
+describe("select() API", () => {
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  beforeAll(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockClear();
+  });
+  afterAll(() => {
+    warn.mockRestore();
+  });
+
+  it("selects a tab by index", () => {
+    const { tabs, panels, controller } = setup();
+    controller.select(2);
+    expectSelected(tabs, panels, 2);
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["-1", "-1", "0"]);
+  });
+
+  it("selects a tab by element", () => {
+    const { tabs, panels, controller } = setup();
+    controller.select(tabs[1]!);
+    expectSelected(tabs, panels, 1);
+  });
+
+  it("exposes the selected tab and index", () => {
+    const { tabs, controller } = setup();
+    expect(controller.selectedTab).toBe(tabs[0]);
+    expect(controller.selectedIndex).toBe(0);
+
+    controller.select(2);
+    expect(controller.selectedTab).toBe(tabs[2]);
+    expect(controller.selectedIndex).toBe(2);
+  });
+
+  it("keeps selectedTab in sync with clicks and keys", () => {
+    const { tabs, controller } = setup();
+    tabs[1]!.click();
+    expect(controller.selectedTab).toBe(tabs[1]);
+
+    tabs[1]!.focus();
+    press("ArrowRight");
+    expect(controller.selectedIndex).toBe(2);
+  });
+
+  it("doesn't fire appret-tabs-change", () => {
+    const { host, controller } = setup();
+    const listener = vi.fn();
+    host.addEventListener("appret-tabs-change", listener);
+    controller.select(2);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("still fires appret-tabs-change for user actions", () => {
+    const { host, tabs, panels } = setup();
+    const listener = vi.fn();
+    host.addEventListener("appret-tabs-change", listener);
+    tabs[1]!.click();
+    expect(listener).toHaveBeenCalledOnce();
+    expect((listener.mock.calls[0]![0] as CustomEvent).detail).toEqual({
+      tab: tabs[1],
+      panel: panels[1],
+      index: 1,
+    });
+  });
+
+  it("doesn't move focus", () => {
+    const { tabs, controller } = setup();
+    tabs[0]!.focus();
+    controller.select(2);
+    expect(document.activeElement).toBe(tabs[0]);
+  });
+
+  it("ignores an index out of range", () => {
+    const { tabs, panels, controller } = setup();
+    controller.select(5);
+    controller.select(-1);
+    expectSelected(tabs, panels, 0);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores an element that isn't one of the tabs", () => {
+    const { tabs, panels, controller } = setup();
+    const other = document.createElement("button");
+    controller.select(other);
+    expectSelected(tabs, panels, 0);
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: selected tab is not among tabs:",
+      other,
+    );
+  });
+
+  it("ignores a disabled tab", () => {
+    const { tabs, panels, controller } = setup({ disabled: [1] });
+    controller.select(1);
+    expectSelected(tabs, panels, 0);
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: can't select a disabled tab:",
+      tabs[1],
+    );
+  });
+
+  it("does nothing after destroy()", () => {
+    const { list, tabs, controller } = setup();
+    const before = list.parentElement!.innerHTML;
+    controller.destroy();
+    const restored = list.parentElement!.innerHTML;
+    expect(restored).not.toBe(before);
+
+    controller.select(1);
+    expect(list.parentElement!.innerHTML).toBe(restored);
+    expect(tabs[1]!.hasAttribute("aria-selected")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: select() called after destroy().",
+    );
+  });
+});
+
+describe("update()", () => {
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  beforeAll(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockClear();
+  });
+  afterAll(() => {
+    warn.mockRestore();
+  });
+
+  /** Creates a tab and panel pair inside the given list and host, like an author would. */
+  function addPair(
+    list: HTMLElement,
+    host: HTMLElement,
+    name: string,
+  ): [HTMLElement, HTMLElement] {
+    const tab = document.createElement("button");
+    tab.textContent = name;
+    list.append(tab);
+    const panel = document.createElement("section");
+    panel.textContent = `${name} panel`;
+    host.append(panel);
+    return [tab, panel];
+  }
+
+  function without<T>(items: T[], index: number): T[] {
+    return items.filter((_, i) => i !== index);
+  }
+
+  describe("selection", () => {
+    it("keeps the selected tab when it's still there", () => {
+      const { list, host, tabs, panels, controller } = setup();
+      controller.select(1);
+      const [newTab, newPanel] = addPair(list, host, "New");
+      list.prepend(newTab);
+
+      controller.update({ tabs: [newTab, ...tabs], panels: [newPanel, ...panels] });
+      expect(controller.selectedTab).toBe(tabs[1]);
+      expect(controller.selectedIndex).toBe(2);
+      expectSelected([newTab, ...tabs], [newPanel, ...panels], 2);
+    });
+
+    it("selects the tab now at the same position when the selected one is removed", () => {
+      const { tabs, panels, controller } = setup({ count: 4 });
+      controller.select(1);
+      controller.update({ tabs: without(tabs, 1), panels: without(panels, 1) });
+      expect(controller.selectedTab).toBe(tabs[2]);
+    });
+
+    it("selects the new last tab when the selected last tab is removed", () => {
+      const { tabs, panels, controller } = setup();
+      controller.select(2);
+      controller.update({ tabs: tabs.slice(0, 2), panels: panels.slice(0, 2) });
+      expect(controller.selectedTab).toBe(tabs[1]);
+      expectSelected(tabs.slice(0, 2), panels.slice(0, 2), 1);
+    });
+
+    it("skips forward past disabled tabs", () => {
+      const { tabs, panels, controller } = setup({ count: 4, disabled: [2] });
+      controller.select(1);
+      controller.update({ tabs: without(tabs, 1), panels: without(panels, 1) });
+      expect(controller.selectedTab).toBe(tabs[3]);
+    });
+
+    it("goes back to the nearest enabled tab when none follow, even with loop: false", () => {
+      const { tabs, panels, controller } = setup({
+        count: 4,
+        disabled: [2],
+        options: { loop: false },
+      });
+      controller.select(3);
+      controller.update({ tabs: tabs.slice(0, 3), panels: panels.slice(0, 3) });
+      expect(controller.selectedTab).toBe(tabs[1]);
+    });
+
+    it("moves the selection when the selected tab became disabled", () => {
+      const { tabs, panels, controller } = setup();
+      controller.select(1);
+      tabs[1]!.setAttribute("aria-disabled", "true");
+      controller.update({ tabs, panels });
+      expect(controller.selectedTab).toBe(tabs[2]);
+    });
+
+    it("doesn't fire appret-tabs-change, even when the selection moves", () => {
+      const { host, tabs, panels, controller } = setup();
+      const listener = vi.fn();
+      host.addEventListener("appret-tabs-change", listener);
+      controller.select(2);
+      controller.update({ tabs: tabs.slice(0, 2), panels: panels.slice(0, 2) });
+      expect(controller.selectedTab).toBe(tabs[1]);
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("added tabs", () => {
+    it("get roles, links and roving tabindex", () => {
+      const { list, host, tabs, panels, controller } = setup();
+      const [newTab, newPanel] = addPair(list, host, "New");
+      controller.update({ tabs: [...tabs, newTab], panels: [...panels, newPanel] });
+
+      expect(newTab.getAttribute("role")).toBe("tab");
+      expect(newPanel.getAttribute("role")).toBe("tabpanel");
+      expect(newTab.getAttribute("aria-controls")).toBe(newPanel.id);
+      expect(newPanel.getAttribute("aria-labelledby")).toBe(newTab.id);
+      expect(newTab.getAttribute("aria-selected")).toBe("false");
+      expect(newTab.getAttribute("tabindex")).toBe("-1");
+      expect(newPanel.hidden).toBe(true);
+    });
+
+    it("are reachable with the keyboard and selectable by click", () => {
+      const { list, host, tabs, panels, controller } = setup();
+      const [newTab, newPanel] = addPair(list, host, "New");
+      const allTabs = [...tabs, newTab];
+      const allPanels = [...panels, newPanel];
+      controller.update({ tabs: allTabs, panels: allPanels });
+
+      tabs[0]!.focus();
+      press("End");
+      expect(document.activeElement).toBe(newTab);
+      expectSelected(allTabs, allPanels, 3);
+
+      press("ArrowRight");
+      expect(document.activeElement).toBe(tabs[0]);
+
+      newTab.click();
+      expectSelected(allTabs, allPanels, 3);
+    });
+  });
+
+  describe("removed tabs", () => {
+    it("get their original markup back", () => {
+      const host = document.createElement("div");
+      host.innerHTML = `
+        <div class="list"><button>One</button><button id="author-id">Two</button></div>
+        <section>One</section><section tabindex="-1">Two</section>`;
+      document.body.append(host);
+      const tabs = [...host.querySelectorAll<HTMLElement>("button")];
+      const panels = [...host.querySelectorAll<HTMLElement>("section")];
+      const before = tabs[1]!.outerHTML + panels[1]!.outerHTML;
+      const controller = new TabsController(host, {
+        list: host.querySelector<HTMLElement>(".list")!,
+        tabs,
+        panels,
+        label: "Sections",
+      });
+      controllers.push(controller);
+
+      controller.update({ tabs: [tabs[0]!], panels: [panels[0]!] });
+      expect(tabs[1]!.outerHTML + panels[1]!.outerHTML).toBe(before);
+    });
+
+    it("no longer react to clicks or keys", () => {
+      const { host, tabs, panels, controller } = setup();
+      const listener = vi.fn();
+      host.addEventListener("appret-tabs-change", listener);
+      controller.update({ tabs: tabs.slice(0, 2), panels: panels.slice(0, 2) });
+
+      tabs[2]!.click();
+      tabs[2]!.focus();
+      const event = press("ArrowLeft");
+
+      expect(controller.selectedTab).toBe(tabs[0]);
+      expect(event.defaultPrevented).toBe(false);
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  it("doesn't duplicate listeners on tabs that stay", () => {
+    const { host, tabs, panels, controller } = setup({ count: 4 });
+    controller.update({ tabs, panels });
+    controller.update({ tabs, panels });
+
+    const listener = vi.fn();
+    host.addEventListener("appret-tabs-change", listener);
+    tabs[0]!.focus();
+    press("ArrowRight"); // duplicated handlers would move two or three steps
+    expect(document.activeElement).toBe(tabs[1]);
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  describe("options", () => {
+    it("can switch to a vertical tablist", () => {
+      const { list, tabs, panels, controller } = setup();
+      controller.update({ orientation: "vertical" });
+      expect(list.getAttribute("aria-orientation")).toBe("vertical");
+
+      tabs[0]!.focus();
+      press("ArrowDown");
+      expectSelected(tabs, panels, 1);
+    });
+
+    it("can switch to manual activation", () => {
+      const { tabs, panels, controller } = setup();
+      controller.update({ activation: "manual" });
+      tabs[0]!.focus();
+      press("ArrowRight");
+      expect(document.activeElement).toBe(tabs[1]);
+      expectSelected(tabs, panels, 0);
+    });
+
+    it("keeps options that aren't passed", () => {
+      const { list, tabs, panels, controller } = setup({
+        options: { orientation: "vertical", label: "Sections" },
+      });
+      controller.update({ tabs, panels });
+      expect(list.getAttribute("aria-orientation")).toBe("vertical");
+      expect(list.getAttribute("aria-label")).toBe("Sections");
+    });
+
+    it("resets an option passed as undefined", () => {
+      const { list, controller } = setup({ options: { orientation: "vertical" } });
+      controller.update({ orientation: undefined });
+      expect(list.hasAttribute("aria-orientation")).toBe(false);
+    });
+
+    it("replaces label with labelledBy", () => {
+      const heading = document.createElement("h2");
+      heading.id = "settings-heading";
+      document.body.append(heading);
+      const { list, controller } = setup({ options: { label: "Sections" } });
+
+      controller.update({ labelledBy: "settings-heading" });
+      expect(list.hasAttribute("aria-label")).toBe(false);
+      expect(list.getAttribute("aria-labelledby")).toBe("settings-heading");
+    });
+
+    it("replaces labelledBy with label", () => {
+      const heading = document.createElement("h2");
+      heading.id = "settings-heading";
+      document.body.append(heading);
+      const { list, controller } = setup({
+        options: { label: undefined, labelledBy: "settings-heading" },
+      });
+
+      controller.update({ label: "Sections" });
+      expect(list.hasAttribute("aria-labelledby")).toBe(false);
+      expect(list.getAttribute("aria-label")).toBe("Sections");
+    });
+  });
+
+  describe("invalid updates", () => {
+    it("throws and leaves the tabs working", () => {
+      const { tabs, panels, controller } = setup();
+      controller.select(1);
+
+      expect(() => controller.update({ tabs: tabs.slice(0, 2) })).toThrow(
+        "Appret tabs: tabs and panels must be the same length.",
+      );
+      expect(() => controller.update({ tabs: [], panels: [] })).toThrow(
+        "Appret tabs: no tabs found.",
+      );
+
+      expect(tabs[2]!.getAttribute("role")).toBe("tab");
+      expectSelected(tabs, panels, 1);
+      tabs[1]!.focus();
+      press("ArrowRight");
+      expectSelected(tabs, panels, 2);
+    });
+  });
+
+  it("does nothing after destroy()", () => {
+    const { list, host, tabs, panels, controller } = setup();
+    controller.destroy();
+    const restored = host.innerHTML;
+
+    controller.update({ tabs, panels, orientation: "vertical" });
+    expect(host.innerHTML).toBe(restored);
+    expect(list.hasAttribute("role")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      "Appret tabs: update() called after destroy().",
+    );
+  });
+});
+
 describe("errors and warnings", () => {
   let warn: ReturnType<typeof vi.spyOn>;
 
