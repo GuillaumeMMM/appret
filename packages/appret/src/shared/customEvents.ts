@@ -1,10 +1,13 @@
-export type CustomEventType = "appret-tabs-change";
+type AppretEventType = Extract<keyof HTMLElementEventMap, `appret-${string}`>;
 
-export function triggerCustomEvent(
+type EventDetail<K extends AppretEventType> =
+  HTMLElementEventMap[K] extends CustomEvent<infer Detail> ? Detail : never;
+
+export function triggerCustomEvent<K extends AppretEventType>(
   host: HTMLElement,
-  type: CustomEventType,
-  detail: unknown,
-) {
+  type: K,
+  detail: EventDetail<K>,
+): void {
   host.dispatchEvent(
     new CustomEvent(type, {
       bubbles: true,

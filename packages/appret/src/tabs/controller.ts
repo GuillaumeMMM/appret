@@ -18,6 +18,20 @@ export type TabsControllerOptions = {
     loop?: boolean;
   };
 
+export type TabsChangeDetail = {
+  tab: HTMLElement;
+  panel: HTMLElement;
+  index: number;
+};
+
+export type TabsChangeEvent = CustomEvent<TabsChangeDetail>;
+
+declare global {
+  interface HTMLElementEventMap {
+    "appret-tabs-change": TabsChangeEvent;
+  }
+}
+
 const labelKeys = ["label", "labelledBy", "labelledByElements"] as const;
 
 //  Merge updated options to make sure a new label key takes precedence
@@ -242,7 +256,7 @@ export class TabsController {
     if (notify && tabToSelect !== this.#selectedTab) {
       triggerCustomEvent(this.host, "appret-tabs-change", {
         tab: tabToSelect,
-        panel: this.#options.panels[selectedIndex],
+        panel: this.#options.panels[selectedIndex]!,
         index: selectedIndex,
       });
     }
