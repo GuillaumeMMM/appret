@@ -1,7 +1,16 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "customConditions": ["appret:source"]
+    "customConditions": ["appret:source"],
+    // Point every TypeScript tool (including the Astro editor extension, which
+    // ignores customConditions) at the library source instead of dist/.
+    "paths": {
+      "appret": ["../packages/appret/src/index.ts"],
+      "appret/*": [
+        "../packages/appret/src/*/index.ts",
+        "../packages/appret/src/*.ts"
+      ]
+    }
   },
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist"]

@@ -109,8 +109,21 @@ API update selected
   <section data-appret-part="tabs.panel">About panel</section>
 </div>
 
+Web component
+<appret-tabs label="label text" loop="false">
+  <div data-appret-part="tabs.list">
+    <button data-appret-part="tabs.tab">Profile</button>
+    <button data-appret-part="tabs.tab" disabled>Billing</button>
+    <button data-appret-part="tabs.tab">About</button>
+  </div>
+  <section data-appret-part="tabs.panel">Profile panel</section>
+  <section data-appret-part="tabs.panel">Billing panel</section>
+  <section data-appret-part="tabs.panel">About panel</section>
+</appret-tabs>
+
 <script>
   import { TabsController } from "appret/tabs";
+  import "appret/define/tabs";
 
   for (const host of document.querySelectorAll<HTMLElement>(".demo-default")) {
     new TabsController(host, {

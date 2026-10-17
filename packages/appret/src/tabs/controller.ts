@@ -1,6 +1,6 @@
-import { AttributeRecorder } from "./shared/attributeRecorder.js";
-import { triggerCustomEvent } from "./shared/customEvents.js";
-import { flatTreeContains, isTreeRoot } from "./shared/tree.js";
+import { AttributeRecorder } from "../shared/attributeRecorder.js";
+import { triggerCustomEvent } from "../shared/customEvents.js";
+import { flatTreeContains, isTreeRoot } from "../shared/tree.js";
 
 type TabsLabel =
   | { label?: string; labelledBy?: never; labelledByElements?: never }

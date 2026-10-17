@@ -2,7 +2,8 @@ import { defineConfig } from "vite";
 
 const entries = {
   index: "src/index.ts",
-  tabs: "src/tabs.ts",
+  "tabs/index": "src/tabs/index.ts",
+  "define/tabs": "src/define/tabs.ts",
 };
 
 export default defineConfig({
@@ -11,6 +12,9 @@ export default defineConfig({
     minify: false,
     sourcemap: true,
     emptyOutDir: false,
+    rolldownOptions: {
+      output: { chunkFileNames: "chunks/[name].js" },
+    },
     lib: {
       entry: entries,
       formats: ["es"],

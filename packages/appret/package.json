@@ -2,7 +2,10 @@
   "name": "appret",
   "version": "0.0.0",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/define/*.js",
+    "./src/define/*.ts"
+  ],
   "files": [
     "dist"
   ],
@@ -13,9 +16,14 @@
       "default": "./dist/index.js"
     },
     "./tabs": {
-      "appret:source": "./src/tabs.ts",
-      "types": "./dist/tabs.d.ts",
-      "default": "./dist/tabs.js"
+      "appret:source": "./src/tabs/index.ts",
+      "types": "./dist/tabs/index.d.ts",
+      "default": "./dist/tabs/index.js"
+    },
+    "./define/tabs": {
+      "appret:source": "./src/define/tabs.ts",
+      "types": "./dist/define/tabs.d.ts",
+      "default": "./dist/define/tabs.js"
     }
   },
   "scripts": {

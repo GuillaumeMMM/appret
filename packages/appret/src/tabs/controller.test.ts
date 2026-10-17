@@ -7,7 +7,7 @@ import {
   it,
   vi,
 } from "vitest";
-import { TabsController, type TabsControllerOptions } from "./tabs.js";
+import { TabsController, type TabsControllerOptions } from "./controller.js";
 
 type Setup = {
   count?: number;
@@ -636,7 +636,11 @@ describe("select() API", () => {
     const { tabs, panels, controller } = setup();
     controller.select(2);
     expectSelected(tabs, panels, 2);
-    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["-1", "-1", "0"]);
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual([
+      "-1",
+      "-1",
+      "0",
+    ]);
   });
 
   it("selects a tab by element", () => {
@@ -777,7 +781,10 @@ describe("update()", () => {
       const [newTab, newPanel] = addPair(list, host, "New");
       list.prepend(newTab);
 
-      controller.update({ tabs: [newTab, ...tabs], panels: [newPanel, ...panels] });
+      controller.update({
+        tabs: [newTab, ...tabs],
+        panels: [newPanel, ...panels],
+      });
       expect(controller.selectedTab).toBe(tabs[1]);
       expect(controller.selectedIndex).toBe(2);
       expectSelected([newTab, ...tabs], [newPanel, ...panels], 2);
@@ -839,7 +846,10 @@ describe("update()", () => {
     it("get roles, links and roving tabindex", () => {
       const { list, host, tabs, panels, controller } = setup();
       const [newTab, newPanel] = addPair(list, host, "New");
-      controller.update({ tabs: [...tabs, newTab], panels: [...panels, newPanel] });
+      controller.update({
+        tabs: [...tabs, newTab],
+        panels: [...panels, newPanel],
+      });
 
       expect(newTab.getAttribute("role")).toBe("tab");
       expect(newPanel.getAttribute("role")).toBe("tabpanel");
@@ -951,7 +961,9 @@ describe("update()", () => {
     });
 
     it("resets an option passed as undefined", () => {
-      const { list, controller } = setup({ options: { orientation: "vertical" } });
+      const { list, controller } = setup({
+        options: { orientation: "vertical" },
+      });
       controller.update({ orientation: undefined });
       expect(list.hasAttribute("aria-orientation")).toBe(false);
     });
