@@ -1,0 +1,24 @@
+<div id="tabs-no-loop">
+  <div class="list">
+    <button>Step 1</button>
+    <button>Step 2</button>
+    <button>Step 3</button>
+  </div>
+  <section>First step</section>
+  <section>Second step</section>
+  <section>Third step</section>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-no-loop")!;
+
+  new TabsController(host, {
+    list: host.querySelector(".list")!,
+    tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
+    panels: [...host.querySelectorAll<HTMLElement>("section")],
+    label: "Checkout",
+    loop: false,
+  });
+</script>

@@ -7,19 +7,34 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Apprêt',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/withastro/starlight' }],
+			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/GuillaumeMMM/appret' }],
+			customCss: ['./src/styles/custom.css'],
 			sidebar: [
 				{
-					label: 'Guides',
+					label: 'Getting started',
 					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
+						{ label: 'Introduction', slug: 'index' },
+						'getting-started/installation',
 					],
 				},
 				{
-					label: 'Components',
-					items: [{ autogenerate: { directory: 'components' } }],
+					label: 'Guides',
+					items: [
+						'guides/shadow-dom',
+						'guides/lit',
+						'guides/html-first',
+						'guides/server-side-rendering',
+					],
 				},
+				{
+					label: 'Controllers',
+					items: [{ autogenerate: { directory: 'controllers' } }],
+				},
+				{
+					label: 'Elements',
+					items: [{ autogenerate: { directory: 'elements' } }],
+				},
+				'changelog',
 			],
 		}),
 	],

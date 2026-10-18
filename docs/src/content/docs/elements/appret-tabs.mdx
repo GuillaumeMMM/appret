@@ -1,0 +1,88 @@
+---
+title: <appret-tabs>
+description: Accessible tabs from HTML, with no JavaScript to write.
+---
+
+import { Code } from "@astrojs/starlight/components";
+
+import Basic from "../../../examples/tabs-element/basic.astro";
+import basicSource from "../../../examples/tabs-element/basic.astro?raw";
+import Attributes from "../../../examples/tabs-element/attributes.astro";
+import attributesSource from "../../../examples/tabs-element/attributes.astro?raw";
+import Select from "../../../examples/tabs-element/select.astro";
+import selectSource from "../../../examples/tabs-element/select.astro?raw";
+import Dynamic from "../../../examples/tabs-element/dynamic.astro";
+import dynamicSource from "../../../examples/tabs-element/dynamic.astro?raw";
+
+`<appret-tabs>` is a custom element that wraps your HTML and makes it a set of tabs following the [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/) using the [Apprêt tabs controller](/controllers/tabs/). It finds its parts in your markup from `data-appret-part` attributes. It adds no styles and no shadow DOM.
+
+<Basic />
+
+## Usage
+
+Load the element once, from a CDN or with a bundler:
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/appret/dist/define/tabs.js"></script>
+```
+
+```js
+import "appret/define/tabs";
+```
+
+Then mark the parts of your markup:
+
+<Code code={basicSource} lang="astro" />
+
+## Examples
+
+### Attributes
+
+<Attributes />
+<Code code={attributesSource} lang="astro" />
+
+### Selecting from JavaScript
+
+<Select />
+<Code code={selectSource} lang="astro" />
+
+### Content loaded later
+
+Tabs can be added or removed after the element was connected to the DOM and initialized.
+
+<Dynamic />
+<Code code={dynamicSource} lang="astro" />
+
+## Reference
+
+### Parts
+
+| `data-appret-part` | |
+| --- | --- |
+| `tabs.list` | Tabs container. |
+| `tabs.tab` | A tab, inside the list. |
+| `tabs.panel` | A panel, in the same order as the tabs. |
+
+### Attributes
+
+| Attribute | Values | Default | |
+| --- | --- | --- | --- |
+| `label` | text | | Label of the tab list. |
+| `labelledby` | IDs | | IDs of visible elements labelling the tab list. |
+| `orientation` | `horizontal`, `vertical` | `horizontal` | |
+| `activation` | `automatic`, `manual` | `automatic` | |
+| `loop` | `false` | `true` | Whether keyboard navigation wrap around at the ends. |
+
+### Properties and methods
+
+| | |
+| --- | --- |
+| `select(tab \| index)` | Selects a tab. |
+| `selectedTab` | Get the selected tab. `null` when there is none. |
+| `selectedIndex` | Get the selected tab's index. `-1` when there is none. Setting it selects a tab. |
+| `focusSelectedTab()` | Moves focus to the selected tab. |
+
+## WAI-ARIA pattern
+
+Keyboard support and WAI-ARIA pattern are the same as the
+[tabs controller](/controllers/tabs/#wai-aria-pattern).

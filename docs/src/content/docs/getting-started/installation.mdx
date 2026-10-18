@@ -1,0 +1,54 @@
+---
+title: Installation
+description: Install Apprêt from npm or load it from a CDN.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+## With a package manager
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm">
+    ```sh
+    npm install appret
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```sh
+    pnpm add appret
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```sh
+    yarn add appret
+    ```
+  </TabItem>
+</Tabs>
+
+Import the controller and the element class if you extend it:
+
+```js
+import { TabsController, TabsElement } from "appret/tabs";
+```
+
+Or register the ready-made `<appret-tabs>` element:
+
+```js
+import "appret/define/tabs";
+```
+
+## From a CDN
+
+Load the element directly:
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/appret/dist/define/tabs.js"></script>
+```
+
+Or in a module script:
+
+```html
+<script type="module">
+  import { TabsController } from "https://cdn.jsdelivr.net/npm/appret/dist/tabs/index.js";
+</script>
+```

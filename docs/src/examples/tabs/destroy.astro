@@ -1,0 +1,38 @@
+<div id="tabs-destroy">
+  <p><button type="button" class="toggle">Destroy</button></p>
+  <div class="list">
+    <button>Profile</button>
+    <button>Billing</button>
+  </div>
+  <section>Profile panel</section>
+  <section>Billing panel</section>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-destroy")!;
+  const toggle = host.querySelector<HTMLElement>(".toggle")!;
+
+  function setUp() {
+    return new TabsController(host, {
+      list: host.querySelector(".list")!,
+      tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
+      panels: [...host.querySelectorAll<HTMLElement>("section")],
+      label: "Account",
+    });
+  }
+
+  let controller: TabsController | undefined = setUp();
+
+  toggle.addEventListener("click", () => {
+    if (controller) {
+      controller.destroy();
+      controller = undefined;
+      toggle.textContent = "Set up again";
+    } else {
+      controller = setUp();
+      toggle.textContent = "Destroy";
+    }
+  });
+</script>

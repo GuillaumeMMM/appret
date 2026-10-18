@@ -1,0 +1,15 @@
+<p id="settings-heading">Settings</p>
+<appret-tabs labelledby="settings-heading" orientation="vertical" activation="manual" loop="false">
+  <div data-appret-part="tabs.list" style="display: flex; flex-direction: column; align-items: start;">
+    <button data-appret-part="tabs.tab">General</button>
+    <button data-appret-part="tabs.tab">Privacy</button>
+    <button data-appret-part="tabs.tab">Notifications</button>
+  </div>
+  <section data-appret-part="tabs.panel">General settings</section>
+  <section data-appret-part="tabs.panel">Privacy settings</section>
+  <section data-appret-part="tabs.panel">Notification settings</section>
+</appret-tabs>
+
+<script>
+  import "appret/define/tabs";
+</script>

@@ -1,0 +1,42 @@
+<p>
+  <button type="button" id="dynamic-example-load">Load tabs</button>
+  <button type="button" id="dynamic-example-add">Add a tab</button>
+</p>
+<appret-tabs id="dynamic-example" label="Reports"></appret-tabs>
+
+<script>
+  import "appret/define/tabs";
+
+  const tabs = document.querySelector("#dynamic-example")!;
+  let count = 0;
+
+  function createPart(tagName: string, part: string, text = "") {
+    const element = document.createElement(tagName);
+    element.dataset.appretPart = part;
+    element.textContent = text;
+    return element;
+  }
+
+  function createTab(name: string) {
+    return createPart("button", "tabs.tab", name);
+  }
+
+  function createPanel(name: string) {
+    return createPart("section", "tabs.panel", `${name} panel`);
+  }
+
+  document.querySelector("#dynamic-example-load")!.addEventListener("click", () => {
+    count = 2;
+    const list = createPart("div", "tabs.list");
+    list.append(createTab("Report 1"), createTab("Report 2"));
+    tabs.replaceChildren(list, createPanel("Report 1"), createPanel("Report 2"));
+  });
+
+  document.querySelector("#dynamic-example-add")!.addEventListener("click", () => {
+    const list = tabs.querySelector('[data-appret-part~="tabs.list"]');
+    if (!list) return;
+    count++;
+    list.append(createTab(`Report ${count}`));
+    tabs.append(createPanel(`Report ${count}`));
+  });
+</script>

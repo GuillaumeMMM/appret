@@ -1,0 +1,23 @@
+<div id="tabs-basic">
+  <div class="list">
+    <button>Profile</button>
+    <button>Billing</button>
+    <button>About</button>
+  </div>
+  <section>Profile panel</section>
+  <section>Billing panel</section>
+  <section>About panel</section>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-basic")!;
+
+  new TabsController(host, {
+    list: host.querySelector(".list")!,
+    tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
+    panels: [...host.querySelectorAll<HTMLElement>("section")],
+    label: "Account",
+  });
+</script>

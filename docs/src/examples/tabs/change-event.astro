@@ -1,0 +1,30 @@
+<div id="tabs-change-event">
+  <div class="list">
+    <button>Profile</button>
+    <button>Billing</button>
+    <button>About</button>
+  </div>
+  <section>Profile panel</section>
+  <section>Billing panel</section>
+  <section>About panel</section>
+  <p>Last change: <output>none yet</output></p>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-change-event")!;
+  const output = host.querySelector("output")!;
+
+  new TabsController(host, {
+    list: host.querySelector(".list")!,
+    tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
+    panels: [...host.querySelectorAll<HTMLElement>("section")],
+    label: "Account",
+  });
+
+  host.addEventListener("appret-tabs-change", (event) => {
+    const { tab, index } = event.detail;
+    output.textContent = `${tab.textContent} (index ${index})`;
+  });
+</script>

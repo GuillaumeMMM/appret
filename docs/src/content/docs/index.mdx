@@ -1,17 +1,64 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
-hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../assets/houston.webp
-  actions:
-    - text: Example Guide
-      link: /guides/example/
-      icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
-      variant: minimal
+title: Introduction
+description: Apprêt, the primer for your web components.
 ---
+
+Apprêt is the primer for your web components. It adds keyboard interactions, focus management, ARIA roles, states and properties to your own markup, following the [WAI-ARIA patterns](https://www.w3.org/WAI/ARIA/apg/patterns/). You keep your HTML, your styles and your shadow DOM, and Apprêt handles the underlying behaviour.
+
+Use Apprêt if you build web components and want them to follow accessibility patterns without writing the keyboard and ARIA logic yourself, or if you write server-rendered HTML and want interactive patterns like tabs without writing JavaScript.
+
+## Build web components
+
+If you maintain custom elements, with Lit or plain `HTMLElement`, use Apprêt's controllers. Your element renders its markup as usual, the controller handles the accessibility layer, and everything it added is removed when it's destroyed.
+
+```html
+<my-library-tabs>
+  <div class="tab-list">
+    <button class="tab">Profile</button>
+    <button class="tab">Billing</button>
+  </div>
+  <section class="tab-panel">Profile panel</section>
+  <section class="tab-panel">Billing panel</section>
+</my-library-tabs>
+```
+
+```js
+import { TabsController } from "appret/tabs";
+
+class MyLibraryTabs extends HTMLElement {
+  #tabs;
+
+  connectedCallback() {
+    this.#tabs = new TabsController(this, {
+      list: this.querySelector(".tab-list"),
+      tabs: [...this.querySelectorAll(".tab")],
+      panels: [...this.querySelectorAll(".tab-panel")],
+      label: "Account",
+    });
+  }
+
+  disconnectedCallback() {
+    this.#tabs.destroy();
+  }
+}
+
+customElements.define("my-library-tabs", MyLibraryTabs);
+```
+
+## Write HTML
+
+If your pages are rendered on the server, or you want a ready-made element instead of writing your own, use Apprêt’s elements.
+Load one with a script tag, wrap your markup in it, and mark each part with a `data-appret-part` attribute. The element sets itself up when the page loads, and updates whenever its content changes.
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/appret/dist/define/tabs.js"></script>
+
+<appret-tabs label="Account">
+  <div data-appret-part="tabs.list">
+    <button data-appret-part="tabs.tab">Profile</button>
+    <button data-appret-part="tabs.tab">Billing</button>
+  </div>
+  <section data-appret-part="tabs.panel">Profile panel</section>
+  <section data-appret-part="tabs.panel">Billing panel</section>
+</appret-tabs>
+```

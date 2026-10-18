@@ -1,0 +1,24 @@
+<div id="tabs-vertical">
+  <div class="list" style="display: flex; flex-direction: column; align-items: start;">
+    <button>Profile</button>
+    <button>Billing</button>
+    <button>About</button>
+  </div>
+  <section>Profile panel</section>
+  <section>Billing panel</section>
+  <section>About panel</section>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-vertical")!;
+
+  new TabsController(host, {
+    list: host.querySelector(".list")!,
+    tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
+    panels: [...host.querySelectorAll<HTMLElement>("section")],
+    label: "Account",
+    orientation: "vertical",
+  });
+</script>

@@ -1,0 +1,22 @@
+<div id="tabs-labelled-by">
+  <p id="tabs-labelled-by-heading">Settings</p>
+  <div class="list">
+    <button>General</button>
+    <button>Privacy</button>
+  </div>
+  <section>General settings</section>
+  <section>Privacy settings</section>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-labelled-by")!;
+
+  new TabsController(host, {
+    list: host.querySelector(".list")!,
+    tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
+    panels: [...host.querySelectorAll<HTMLElement>("section")],
+    labelledBy: "tabs-labelled-by-heading",
+  });
+</script>

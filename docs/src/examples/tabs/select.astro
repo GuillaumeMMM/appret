@@ -1,0 +1,30 @@
+<div id="tabs-select">
+  <div class="list">
+    <button>Profile</button>
+    <button>Billing</button>
+    <button>About</button>
+  </div>
+  <section>Profile panel</section>
+  <section>Billing panel</section>
+  <section>About panel</section>
+  <p><button type="button" class="show-billing">Show billing</button></p>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-select")!;
+  const tabs = [...host.querySelectorAll<HTMLElement>(".list > button")];
+
+  const controller = new TabsController(host, {
+    list: host.querySelector(".list")!,
+    tabs,
+    panels: [...host.querySelectorAll<HTMLElement>("section")],
+    label: "Account",
+    initialSelectedTab: 2,
+  });
+
+  host.querySelector(".show-billing")!.addEventListener("click", () => {
+    controller.select(1);
+  });
+</script>

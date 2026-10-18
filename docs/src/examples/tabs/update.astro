@@ -1,0 +1,54 @@
+<div id="tabs-update">
+  <p>
+    <button type="button" class="add">Add a tab</button>
+    <button type="button" class="remove">Remove the selected tab</button>
+  </p>
+  <div class="list">
+    <button>Tab 1</button>
+    <button>Tab 2</button>
+  </div>
+  <section>Panel 1</section>
+  <section>Panel 2</section>
+</div>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  const host = document.querySelector<HTMLElement>("#tabs-update")!;
+  const list = host.querySelector<HTMLElement>(".list")!;
+  const tabs = [...list.querySelectorAll<HTMLElement>("button")];
+  const panels = [...host.querySelectorAll<HTMLElement>("section")];
+  let count = tabs.length;
+
+  const controller = new TabsController(host, {
+    list,
+    tabs,
+    panels,
+    label: "Documents",
+  });
+
+  function addTab() {
+    count++;
+    const tab = document.createElement("button");
+    tab.textContent = `Tab ${count}`;
+    const panel = document.createElement("section");
+    panel.textContent = `Panel ${count}`;
+
+    list.append(tab);
+    host.append(panel);
+    tabs.push(tab);
+    panels.push(panel);
+    controller.update({ tabs, panels });
+  }
+
+  function removeSelectedTab() {
+    if (tabs.length === 1) return;
+    const index = controller.selectedIndex;
+    tabs.splice(index, 1)[0]!.remove();
+    panels.splice(index, 1)[0]!.remove();
+    controller.update({ tabs, panels });
+  }
+
+  host.querySelector(".add")!.addEventListener("click", addTab);
+  host.querySelector(".remove")!.addEventListener("click", removeSelectedTab);
+</script>

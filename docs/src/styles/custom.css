@@ -1,0 +1,10 @@
+.sl-markdown-content kbd:not(:where(.not-content *)) {
+  font-family: var(--sl-font, var(--sl-font-system));
+  font-size: inherit;
+  color: var(--sl-color-gray-2);
+  background-color: var(--sl-color-gray-6);
+  border-radius: 0.25rem;
+  padding: 0.125em 0.375em;
+  white-space: nowrap;
+  margin: 0;
+}

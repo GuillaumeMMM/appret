@@ -1,0 +1,36 @@
+<p id="tabs-shadow-dom-heading">Project</p>
+<example-shadow-tabs>
+  <button slot="tab">Overview</button>
+  <button slot="tab">Activity</button>
+</example-shadow-tabs>
+
+<script>
+  import { TabsController } from "appret/tabs";
+
+  class ExampleShadowTabs extends HTMLElement {
+    #controller?: TabsController;
+
+    connectedCallback() {
+      const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+      root.innerHTML = `
+        <div><slot name="tab"></slot></div>
+        <section>Overview panel, inside the shadow root</section>
+        <section>Activity panel, inside the shadow root</section>`;
+
+      this.#controller = new TabsController(this, {
+        list: root.querySelector("div")!,
+        tabs: [...this.querySelectorAll<HTMLElement>('[slot="tab"]')],
+        panels: [...root.querySelectorAll("section")],
+        labelledByElements: [document.getElementById("tabs-shadow-dom-heading")!],
+      });
+    }
+
+    disconnectedCallback() {
+      this.#controller?.destroy();
+    }
+  }
+
+  if (!customElements.get("example-shadow-tabs")) {
+    customElements.define("example-shadow-tabs", ExampleShadowTabs);
+  }
+</script>
