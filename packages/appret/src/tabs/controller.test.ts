@@ -523,6 +523,80 @@ describe("right-to-left", () => {
   });
 });
 
+describe("initialSelectedTab", () => {
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  beforeAll(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockClear();
+  });
+  afterAll(() => {
+    warn.mockRestore();
+  });
+
+  it("selects a tab passed as an element", () => {
+    const { host, list, tabs, panels, controller } = setup();
+    controller.destroy();
+    controllers.push(
+      new TabsController(host, {
+        list,
+        tabs,
+        panels,
+        label: "Sections",
+        initialSelectedTab: tabs[2],
+      }),
+    );
+    expectSelected(tabs, panels, 2);
+  });
+
+  it("selects a tab passed as an index", () => {
+    const { tabs, panels } = setup({ options: { initialSelectedTab: 2 } });
+    expectSelected(tabs, panels, 2);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("treats index 0 as a valid selection", () => {
+    const { tabs, panels } = setup({
+      disabled: [1],
+      options: { initialSelectedTab: 0 },
+    });
+    expectSelected(tabs, panels, 0);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each([3, -1, 1.5])(
+    "warns and falls back to the first enabled tab for index %s",
+    (index) => {
+      const { tabs, panels } = setup({
+        disabled: [0],
+        options: { initialSelectedTab: index },
+      });
+      expectSelected(tabs, panels, 1);
+      expect(warn).toHaveBeenCalledWith(
+        "Appret tabs: the initial selected tab is not among tabs.",
+      );
+    },
+  );
+
+  it("falls back to the first enabled tab when the index points to a disabled tab", () => {
+    const { tabs, panels } = setup({
+      disabled: [2],
+      options: { initialSelectedTab: 2 },
+    });
+    expectSelected(tabs, panels, 0);
+  });
+
+  it("doesn't fire appret-tabs-change for the initial selection", () => {
+    const listener = vi.fn();
+    document.addEventListener("appret-tabs-change", listener);
+    setup({ options: { initialSelectedTab: 1 } });
+    document.removeEventListener("appret-tabs-change", listener);
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
 describe("loop: false", () => {
   it("Right Arrow on the last tab stays on it", () => {
     const { tabs, panels } = setup({ options: { loop: false } });
@@ -795,6 +869,42 @@ describe("update()", () => {
       controller.select(1);
       controller.update({ tabs: without(tabs, 1), panels: without(panels, 1) });
       expect(controller.selectedTab).toBe(tabs[2]);
+    });
+
+    it("selects the tab now at the same position when the arrays are mutated in place", () => {
+      const { tabs, panels, controller } = setup({ count: 4 });
+      controller.select(1);
+
+      // The same arrays that were passed to the controller.
+      tabs.splice(1, 1)[0]!.remove();
+      panels.splice(1, 1)[0]!.remove();
+      controller.update({ tabs, panels });
+
+      expect(controller.selectedTab.textContent).toBe("Tab 3");
+      expectSelected(tabs, panels, 1);
+    });
+
+    it("manages a tab pushed into the same array once update() is called", () => {
+      const { list, host, tabs, panels, controller } = setup();
+      const [tab, panel] = addPair(list, host, "New");
+      tabs.push(tab);
+      panels.push(panel);
+      controller.update({ tabs, panels });
+
+      expect(tab.getAttribute("role")).toBe("tab");
+      expect(controller.selectedIndex).toBe(0);
+    });
+
+    it("ignores changes to the arrays until update() is called", () => {
+      const { list, host, tabs, panels } = setup();
+      const [tab, panel] = addPair(list, host, "New");
+      tabs.push(tab);
+      panels.push(panel);
+
+      tabs[0]!.focus();
+      press("End");
+      expect(document.activeElement).toBe(tabs[2]);
+      expect(tab.hasAttribute("role")).toBe(false);
     });
 
     it("selects the new last tab when the selected last tab is removed", () => {

@@ -13,7 +13,7 @@ export type TabsControllerOptions = {
   panels: HTMLElement[];
 } & TabsLabel & {
     orientation?: "horizontal" | "vertical";
-    initialSelectedTab?: HTMLElement;
+    initialSelectedTab?: HTMLElement | number;
     activation?: "manual" | "automatic";
     loop?: boolean;
   };
@@ -58,19 +58,29 @@ export class TabsController {
     this.host = host;
     this.#validateOptions(options);
 
-    this.#options = options;
+    //  Create a copy of tabs and panels to avoid side effects
+    this.#options = {
+      ...options,
+      tabs: [...options.tabs],
+      panels: [...options.panels],
+    };
+
     const { tabs, initialSelectedTab } = this.#options;
 
+    const initialTab =
+      typeof initialSelectedTab === "number"
+        ? tabs[initialSelectedTab]
+        : initialSelectedTab;
     const isInitialSelectedTabValid =
-      initialSelectedTab && tabs.includes(initialSelectedTab);
+      initialTab !== undefined && tabs.includes(initialTab);
 
-    if (initialSelectedTab && !isInitialSelectedTabValid) {
+    if (initialSelectedTab !== undefined && !isInitialSelectedTabValid) {
       console.warn("Appret tabs: the initial selected tab is not among tabs.");
     }
 
     this.#selectedTab =
-      isInitialSelectedTabValid && !this.#isDisabled(initialSelectedTab!)
-        ? initialSelectedTab!
+      isInitialSelectedTabValid && !this.#isDisabled(initialTab!)
+        ? initialTab!
         : (this.#findEnabledTab(-1, 1) ?? tabs[0]!);
 
     this.#setup();
@@ -455,7 +465,14 @@ export class TabsController {
       console.warn("Appret tabs: update() called after destroy().");
       return;
     }
-    const next = mergeOptions(this.#options, changes);
+
+    const mergedOptions = mergeOptions(this.#options, changes);
+    const next = {
+      ...mergedOptions,
+      tabs: [...mergedOptions.tabs],
+      panels: [...mergedOptions.panels],
+    };
+
     this.#validateOptions(next);
 
     const previousTab = this.#selectedTab;

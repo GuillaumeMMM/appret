@@ -138,10 +138,7 @@ export class TabsElement extends HTMLElementBase {
       this.#controller = new TabsController(this, {
         ...parts,
         ...this.#getAttributeOptions(),
-        initialSelectedTab:
-          typeof this.#pendingSelection === "number"
-            ? parts.tabs[this.#pendingSelection]
-            : this.#pendingSelection,
+        initialSelectedTab: this.#pendingSelection,
       } as TabsControllerOptions);
 
       this.#parts = parts as TabsParts;
