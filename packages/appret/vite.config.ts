@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 const entries = {
   index: "src/index.ts",
   "tabs/index": "src/tabs/index.ts",
+  "listbox/index": "src/listbox/index.ts",
   "define/tabs": "src/define/tabs.ts",
 };
 

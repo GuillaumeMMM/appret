@@ -1,0 +1,26 @@
+<div id="listbox-basic">
+  <span id="listbox-basic-label">Fruit</span>
+  <ul class="list">
+    <li>Apple</li>
+    <li>Banana</li>
+    <li>Cherry</li>
+    <li>Grape</li>
+  </ul>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-basic")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
+    labelledBy: "listbox-basic-label",
+    selectionFollowsFocus: true,
+    selectOptionOnListFocus: true,
+    initialSelectedOption: Array.from(
+      host.querySelectorAll<HTMLElement>(".list > li"),
+    )[2],
+  });
+</script>
