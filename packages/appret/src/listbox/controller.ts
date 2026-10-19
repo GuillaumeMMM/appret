@@ -53,6 +53,9 @@ export class ListboxController {
   #attributeRecorder = new AttributeRecorder();
   #abort!: AbortController;
 
+  #typeahead = "";
+  #typeaheadTimeout: ReturnType<typeof setTimeout> | undefined;
+
   #selectedOption: HTMLElement | null = null;
   #activeOption!: HTMLElement;
 
@@ -384,11 +387,19 @@ export class ListboxController {
               break;
             }
             case " ": {
+              if (this.#typeahead) {
+                target = this.#findOptionByText(" ", i);
+                break;
+              }
+
               if (!selectionFollowsFocus) {
                 e.preventDefault();
                 this.#setSelectedOption(option);
               }
               break;
+            }
+            default: {
+              target = this.#findOptionByText(e.key, i);
             }
           }
 
@@ -481,6 +492,37 @@ export class ListboxController {
       this.#options.options ??
       (this.#options.groups ?? []).flatMap((g) => g.options)
     );
+  }
+
+  #findOptionByText(
+    key: string,
+    startFromIndex: number,
+  ): HTMLElement | undefined {
+    console.log(key);
+    clearTimeout(this.#typeaheadTimeout);
+    this.#typeaheadTimeout = setTimeout(() => (this.#typeahead = ""), 500);
+
+    this.#typeahead += key.toLowerCase();
+
+    // Pressing the same letter again cycles through the options starting with it
+    const search = [...this.#typeahead].every((c) => c === this.#typeahead[0])
+      ? this.#typeahead[0]!
+      : this.#typeahead;
+
+    const flatOptions = this.#getFlatOptions();
+    const start = search.length === 1 ? startFromIndex + 1 : startFromIndex;
+
+    for (let i = 0; i < flatOptions.length; i++) {
+      const option = flatOptions[(start + i) % flatOptions.length]!;
+      const text = (option.textContent ?? "").toLowerCase();
+
+      if (!this.#isDisabled(option) && text.startsWith(search)) {
+        console.log(option);
+        return option;
+      }
+    }
+
+    return undefined;
   }
 
   #teardown(): void {
