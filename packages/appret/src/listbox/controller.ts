@@ -68,12 +68,17 @@ export class ListboxController {
     this.#options = options;
 
     if (!options.multiple && options.initialSelectedOption !== undefined) {
-      if (this.#getFlatOptions().includes(options.initialSelectedOption)) {
-        this.#selectedOption = options.initialSelectedOption;
-      } else {
+      if (!this.#getFlatOptions().includes(options.initialSelectedOption)) {
         console.warn(
           "Appret listbox: the initial selected option is not among the options.",
         );
+      } else if (this.#isDisabled(options.initialSelectedOption)) {
+        console.warn(
+          "Appret listbox: the initial selected option is disabled.",
+          options.initialSelectedOption,
+        );
+      } else {
+        this.#selectedOption = options.initialSelectedOption;
       }
     }
 
@@ -100,7 +105,11 @@ export class ListboxController {
         "true",
       );
     }
-    this.#setActiveOption(this.#selectedOption ?? this.#getFlatOptions()[0]!);
+    this.#setActiveOption(
+      this.#selectedOption ??
+        this.#findNonDisabledOption(-1, 1) ??
+        this.#getFlatOptions()[0]!,
+    );
   }
 
   #validateOptions(newOptions: ListboxControllerOptions) {
@@ -311,7 +320,7 @@ export class ListboxController {
       option.addEventListener(
         "click",
         (e) => {
-          if (e.defaultPrevented) {
+          if (e.defaultPrevented || this.#isDisabled(option)) {
             return;
           }
 
@@ -333,26 +342,45 @@ export class ListboxController {
             return;
           }
 
-          const previousOption = flatOptions[i - 1] ?? null;
-          const nextOption = flatOptions[i + 1] ?? null;
+          const previousOption = this.#findNonDisabledOption(i, -1);
+          const nextOption = this.#findNonDisabledOption(i, 1);
+
+          const horizontal = orientation === "horizontal";
+          const rtl = horizontal && getComputedStyle(list).direction === "rtl";
 
           let target;
 
           switch (e.key) {
             case "ArrowUp": {
-              target = previousOption;
+              if (!horizontal) {
+                target = previousOption;
+              }
               break;
             }
             case "ArrowDown": {
-              target = nextOption;
+              if (!horizontal) {
+                target = nextOption;
+              }
+              break;
+            }
+            case "ArrowLeft": {
+              if (horizontal) {
+                target = rtl ? nextOption : previousOption;
+              }
+              break;
+            }
+            case "ArrowRight": {
+              if (horizontal) {
+                target = rtl ? previousOption : nextOption;
+              }
               break;
             }
             case "Home": {
-              target = flatOptions[0];
+              target = this.#findNonDisabledOption(-1, 1);
               break;
             }
             case "End": {
-              target = flatOptions[flatOptions.length - 1];
+              target = this.#findNonDisabledOption(flatOptions.length, -1);
               break;
             }
             case " ": {
@@ -380,6 +408,10 @@ export class ListboxController {
   }
 
   #setSelectedOption(optionToSelect: HTMLElement, { notify = true } = {}) {
+    if (this.#isDisabled(optionToSelect)) {
+      return;
+    }
+
     let selectedIndex = 0;
 
     const flatOptions = this.#getFlatOptions();
@@ -414,6 +446,34 @@ export class ListboxController {
       );
     }
     this.#activeOption = optionToActivate;
+  }
+
+  #isDisabled(option: HTMLElement): boolean {
+    const group = this.#options.groups?.find((g) => g.options.includes(option));
+
+    return [option, group?.group, this.#options.list].some(
+      (el) => el?.getAttribute("aria-disabled") === "true",
+    );
+  }
+
+  #findNonDisabledOption(
+    fromIndex: number,
+    step: 1 | -1,
+  ): HTMLElement | undefined {
+    const flatOptions = this.#getFlatOptions();
+
+    for (
+      let i = fromIndex + step;
+      i >= 0 && i < flatOptions.length;
+      i += step
+    ) {
+      const option = flatOptions[i]!;
+      if (!this.#isDisabled(option)) {
+        return option;
+      }
+    }
+
+    return undefined;
   }
 
   #getFlatOptions() {
