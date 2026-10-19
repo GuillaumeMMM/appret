@@ -17,6 +17,6 @@
     list: host.querySelector(".list")!,
     tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
     panels: [...host.querySelectorAll<HTMLElement>("section")],
-    labelledBy: "tabs-labelled-by-heading",
+    label: { byId: "tabs-labelled-by-heading" },
   });
 </script>

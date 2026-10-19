@@ -21,7 +21,9 @@
         list: root.querySelector("div")!,
         tabs: [...this.querySelectorAll<HTMLElement>('[slot="tab"]')],
         panels: [...root.querySelectorAll("section")],
-        labelledByElements: [document.getElementById("tabs-shadow-dom-heading")!],
+        label: {
+          byElements: [document.getElementById("tabs-shadow-dom-heading")!],
+        },
       });
     }
 

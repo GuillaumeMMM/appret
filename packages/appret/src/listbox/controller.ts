@@ -1,50 +1,40 @@
 import { AttributeRecorder } from "../shared/attributeRecorder.js";
+import { copyLists } from "../shared/copyLists.js";
 import { triggerCustomEvent } from "../shared/customEvents.js";
-import { flatTreeContains, isTreeRoot } from "../shared/tree.js";
-
-type Label =
-  | { label?: string; labelledBy?: never; labelledByElements?: never }
-  | { labelledBy?: string; label?: never; labelledByElements?: never }
-  | { labelledByElements?: Element[]; label?: never; labelledBy?: never };
+import { setLabel, type Label } from "../shared/label.js";
+import { flatTreeContains } from "../shared/tree.js";
 
 export type ListboxGroup = {
   group: HTMLElement;
   options: HTMLElement[];
-} & Label;
-
-type Options =
-  | { options: HTMLElement[]; groups?: never }
-  | { groups: ListboxGroup[]; options?: never };
-
-type ListboxUpdate = Omit<
-  Partial<ListboxControllerOptions>,
-  "initialSelectedOption" | "initialSelectedOptions"
->;
+  label?: Label;
+};
 
 type Selection =
   | {
       multiple?: false;
-      initialSelectedOption?: HTMLElement;
+      initialSelection?: HTMLElement;
       selectionFollowsFocus?: boolean;
-      selectOptionOnListFocus?: boolean;
     }
   | {
       multiple: true;
-      initialSelectedOptions?: HTMLElement[];
+      initialSelection?: HTMLElement[];
       selectionFollowsFocus?: never;
-      selectOptionOnListFocus?: never;
     };
 
-export type ListboxControllerOptions = {
+export type ListboxControllerConfig = {
   list: HTMLElement;
+  //  Options, or groups of options
+  options: HTMLElement[] | ListboxGroup[];
+  label?: Label;
   orientation?: "horizontal" | "vertical";
-} & Label &
-  Options &
-  Selection;
+} & Selection;
 
-export type ListboxChangeDetail =
-  | { option: HTMLElement; options?: never }
-  | { options: HTMLElement[]; option?: never };
+export type ListboxChangeDetail = {
+  //  The first selected option
+  option: HTMLElement | null;
+  options: HTMLElement[];
+};
 
 export type ListboxChangeEvent = CustomEvent<ListboxChangeDetail>;
 
@@ -56,69 +46,29 @@ declare global {
 
 export class ListboxController {
   readonly host: HTMLElement;
-  #options: ListboxControllerOptions;
+  #config: ListboxControllerConfig;
   #attributeRecorder = new AttributeRecorder();
   #abort!: AbortController;
 
   #typeahead = "";
   #typeaheadTimeout: ReturnType<typeof setTimeout> | undefined;
 
-  #selectedOption: HTMLElement | null = null;
+  //  In DOM order, with at most one option without `multiple`
+  #selected: HTMLElement[] = [];
   #activeOption: HTMLElement | null = null;
 
-  //  When multiple
-  #selectedOptions: HTMLElement[] = [];
   //  Anchor to toggle options when user types Shift + " "
   #lastSelectedOption: HTMLElement | null = null;
 
   #destroyed = false;
 
-  constructor(host: HTMLElement, options: ListboxControllerOptions) {
+  constructor(host: HTMLElement, config: ListboxControllerConfig) {
     this.host = host;
-    this.#validateOptions(options);
+    this.#validateConfig(config);
 
-    this.#options = optionsWithCopiesLists(options);
-    const flatOptions = this.#getFlatOptions();
-
-    if (!options.multiple && options.initialSelectedOption !== undefined) {
-      if (!flatOptions.includes(options.initialSelectedOption)) {
-        console.warn(
-          "Appret listbox: the initial selected option is not among the options.",
-        );
-      } else if (this.#isDisabled(options.initialSelectedOption)) {
-        console.warn(
-          "Appret listbox: the initial selected option is disabled.",
-          options.initialSelectedOption,
-        );
-      } else {
-        this.#selectedOption = options.initialSelectedOption;
-      }
-    }
-
-    if (options.multiple && options.initialSelectedOptions?.length) {
-      const initialSelectedOptionsNotInListbox =
-        options.initialSelectedOptions.filter((o) => !flatOptions.includes(o));
-      if (initialSelectedOptionsNotInListbox.length > 0) {
-        console.warn(
-          "Appret listbox: some of the initial selected options are not among the options:",
-          initialSelectedOptionsNotInListbox,
-        );
-      }
-
-      const disabledInitialSelectedOptions =
-        options.initialSelectedOptions.filter((o) => this.#isDisabled(o));
-      if (disabledInitialSelectedOptions?.length) {
-        console.warn(
-          "Appret listbox: some of the initial selected options are disabled.",
-          disabledInitialSelectedOptions,
-        );
-      }
-
-      this.#selectedOptions = options.initialSelectedOptions.filter(
-        (o) =>
-          !initialSelectedOptionsNotInListbox.includes(o) &&
-          !disabledInitialSelectedOptions.includes(o),
-      );
+    this.#config = copyLists(config);
+    if (config.initialSelection !== undefined) {
+      this.#selected = this.#validSelection(config.initialSelection) ?? [];
     }
 
     this.#setup();
@@ -128,24 +78,16 @@ export class ListboxController {
     this.#abort = new AbortController();
 
     this.#setAriaRoles();
-    this.#setLabels(this.#options.list, this.#options);
-    for (const group of this.#options.groups ?? []) {
-      this.#setLabels(group.group, group);
+    this.#setLabels(this.#config.list, this.#config.label, "listbox");
+    for (const group of this.#getGroups()) {
+      this.#setLabels(group.group, group.label, "group");
     }
     this.#setOrientation();
     this.#setMultiselectable();
     this.#setListeners();
 
     //  When setting up on init or after update set the selected and active option
-    if (this.#options.multiple) {
-      this.#setSelectedOptions(this.#selectedOptions, { notify: false });
-    } else if (this.#selectedOption) {
-      this.#attributeRecorder.set(
-        this.#selectedOption,
-        "aria-selected",
-        "true",
-      );
-    }
+    this.#setSelected(this.#selected, { notify: false });
 
     //  After an update, the active option stays active if possible
     const flatOptions = this.#getFlatOptions();
@@ -158,33 +100,37 @@ export class ListboxController {
 
     this.#setActiveOption(
       keptActiveOption ??
-        this.#getFirstSelectedOption() ??
+        this.#selected[0] ??
         this.#findNonDisabledOption(-1, 1) ??
         flatOptions[0]!,
     );
   }
 
-  #validateOptions(newOptions: ListboxControllerOptions) {
-    const { list, options, groups } = newOptions;
+  #validateConfig(newConfig: ListboxControllerConfig) {
+    const { list, options } = newConfig;
 
     if (!list) {
       throw new Error("Appret listbox: `list` is required.");
     }
 
-    if (options && groups) {
+    const groupCount = (options ?? []).filter(isGroup).length;
+    if (groupCount > 0 && groupCount < options.length) {
       throw new Error(
-        "Appret listbox: pass either `options` or `groups`, not both.",
+        "Appret listbox: `options` must be all options or all groups, not both.",
       );
     }
 
+    const groups = groupCount > 0 ? (options as ListboxGroup[]) : [];
     const flatOptions =
-      options ?? groups?.flatMap((g) => g.options ?? []) ?? [];
+      groupCount > 0
+        ? groups.flatMap((g) => g.options ?? [])
+        : ((options ?? []) as HTMLElement[]);
 
     if (flatOptions.length === 0) {
       throw new Error("Appret listbox: no options found.");
     }
 
-    const invalidGroups = (groups ?? []).filter(
+    const invalidGroups = groups.filter(
       (g) => !g.group || !g.options?.length || !flatTreeContains(list, g.group),
     );
 
@@ -195,7 +141,7 @@ export class ListboxController {
       );
     }
 
-    const misplacedOptions = (groups ?? []).flatMap((g) =>
+    const misplacedOptions = groups.flatMap((g) =>
       g.group
         ? (g.options ?? []).filter((o) => !flatTreeContains(g.group, o))
         : [],
@@ -219,138 +165,63 @@ export class ListboxController {
   }
 
   #setAriaRoles() {
-    this.#attributeRecorder.set(this.#options.list, "role", "listbox");
+    this.#attributeRecorder.set(this.#config.list, "role", "listbox");
 
-    for (const option of this.#options.options ?? []) {
-      this.#attributeRecorder.set(option, "role", "option");
-    }
-    for (const group of this.#options.groups ?? []) {
+    for (const group of this.#getGroups()) {
       this.#attributeRecorder.set(group.group, "role", "group");
-
-      for (const groupOption of group.options) {
-        this.#attributeRecorder.set(groupOption, "role", "option");
-      }
+    }
+    for (const option of this.#getFlatOptions()) {
+      this.#attributeRecorder.set(option, "role", "option");
     }
   }
 
-  #setLabels(element: HTMLElement, labelObj: Label) {
-    const { label, labelledBy, labelledByElements } = labelObj;
-
-    if (label) {
-      this.#attributeRecorder.set(element, "aria-label", label);
-      return;
-    }
-
-    if (labelledBy) {
-      this.#attributeRecorder.set(element, "aria-labelledby", labelledBy);
-
-      const root = element.getRootNode();
-      if (isTreeRoot(root)) {
-        const ids = labelledBy.trim().split(/\s+/);
-
-        const labelElements = ids
-          .map((id) => root.getElementById(id))
-          .filter((el) => el !== null);
-
-        const unreachableIds = ids.filter((id) => !root.getElementById(id));
-
-        if (unreachableIds.length > 0) {
-          console.warn(
-            "Appret listbox: ID missing in the element's document or shadow root:",
-            unreachableIds,
-          );
-        }
-
-        this.#hideLabelRoles(labelElements);
-      }
-      return;
-    }
-
-    if (labelledByElements?.length) {
-      this.#attributeRecorder.setElements(
-        element,
-        "ariaLabelledByElements",
-        labelledByElements,
-      );
-
-      this.#hideLabelRoles(labelledByElements);
-
-      //  Label elements might be dropped when they are in another shadow root
-      const listAriaLabelledElements = element.ariaLabelledByElements;
-      const dropped = labelledByElements.filter(
-        (el) => !(listAriaLabelledElements ?? []).includes(el),
-      );
-
-      if (dropped.length > 0) {
-        console.warn(
-          "Appret listbox: these labelledByElements can't label the element because they're inside another shadow root:",
-          dropped,
-        );
-      }
-      return;
-    }
-
-    //  If the list has no accessible labels in the end (labels may have been added in other ways)
-    if (
-      !element.getAttribute("aria-label") &&
-      !element.getAttribute("aria-labelledby") &&
-      !element.ariaLabelledByElements?.length
-    ) {
-      console.warn(
-        "Appret listbox: the element is missing an accessible label.",
-        element,
-      );
-    }
+  #setLabels(element: HTMLElement, label: Label | undefined, name: string) {
+    const labelElements = setLabel(element, label, {
+      recorder: this.#attributeRecorder,
+      prefix: "Appret listbox",
+      name,
+    });
+    this.#hideLabelRoles(labelElements);
   }
 
   //  Add a presentation role for labels that would be inside the list
   #hideLabelRoles(labelElements: Element[]) {
     for (const el of labelElements) {
-      if (flatTreeContains(this.#options.list, el)) {
+      if (flatTreeContains(this.#config.list, el)) {
         this.#attributeRecorder.set(el, "role", "presentation");
       }
     }
   }
 
   #setOrientation() {
-    if (this.#options.orientation) {
+    if (this.#config.orientation) {
       this.#attributeRecorder.set(
-        this.#options.list,
+        this.#config.list,
         "aria-orientation",
-        this.#options.orientation,
+        this.#config.orientation,
       );
     }
   }
 
   #setMultiselectable() {
-    if (this.#options.multiple !== undefined) {
+    if (this.#config.multiple !== undefined) {
       this.#attributeRecorder.set(
-        this.#options.list,
+        this.#config.list,
         "aria-multiselectable",
-        this.#options.multiple.toString(),
+        this.#config.multiple.toString(),
       );
     }
   }
 
   #setListeners() {
-    const {
-      list,
-      orientation,
-      multiple,
-      selectionFollowsFocus,
-      selectOptionOnListFocus,
-    } = this.#options;
+    const { list, orientation, multiple, selectionFollowsFocus } = this.#config;
     const flatOptions = this.#getFlatOptions();
 
     list.addEventListener(
       "focusin",
       (e) => {
-        if (
-          multiple ||
-          !selectOptionOnListFocus ||
-          this.#selectedOption ||
-          this.#selectedOptions.length
-        ) {
+        //  Selection follows focus into the listbox too, when nothing is selected
+        if (multiple || !selectionFollowsFocus || this.#selected.length > 0) {
           return;
         }
 
@@ -363,7 +234,7 @@ export class ListboxController {
 
         const option = flatOptions.find((o) => o === e.target);
         if (option) {
-          this.#setSelectedOption(option);
+          this.#setSelected([option]);
         }
       },
       { signal: this.#abort.signal },
@@ -381,7 +252,7 @@ export class ListboxController {
           if (multiple) {
             this.#toggleSelectedOption(option);
           } else {
-            this.#setSelectedOption(option);
+            this.#setSelected([option]);
           }
           option.focus();
         },
@@ -403,10 +274,10 @@ export class ListboxController {
             e.key.toLowerCase() === "a"
           ) {
             e.preventDefault();
-            const selectedOptions = nonDisabled.every((o) =>
-              this.#selectedOptions.includes(o),
+            const allSelected = nonDisabled.every((o) =>
+              this.#selected.includes(o),
             );
-            this.#setSelectedOptions(selectedOptions ? [] : nonDisabled);
+            this.#setSelected(allSelected ? [] : nonDisabled);
             return;
           }
 
@@ -481,7 +352,7 @@ export class ListboxController {
               }
 
               if (!selectionFollowsFocus) {
-                this.#setSelectedOption(option);
+                this.#setSelected([option]);
               }
               break;
             }
@@ -507,7 +378,7 @@ export class ListboxController {
             target.focus();
 
             if (!multiple && selectionFollowsFocus) {
-              this.#setSelectedOption(target);
+              this.#setSelected([target]);
             }
           }
 
@@ -542,77 +413,88 @@ export class ListboxController {
     }
   }
 
-  //  null clears the selection, which only the API does
-  #setSelectedOption(
-    optionToSelect: HTMLElement | null,
-    { notify = true } = {},
-  ) {
-    if (optionToSelect && this.#isDisabled(optionToSelect)) {
-      return;
-    }
-
+  #setSelected(optionsToSelect: HTMLElement[], { notify = true } = {}) {
     const flatOptions = this.#getFlatOptions();
-
-    for (const option of flatOptions) {
-      if (option === optionToSelect) {
-        this.#attributeRecorder.set(option, "aria-selected", "true");
-      } else {
-        if (option.getAttribute("aria-selected") === "true") {
-          this.#attributeRecorder.remove(option, "aria-selected");
-        }
-      }
-    }
-
-    if (notify && optionToSelect && optionToSelect !== this.#selectedOption) {
-      triggerCustomEvent(this.host, "appret-listbox-change", {
-        option: optionToSelect,
-      });
-    }
-
-    this.#selectedOption = optionToSelect;
-  }
-
-  #setSelectedOptions(optionsToSelect: HTMLElement[], { notify = true } = {}) {
-    const selected = this.#getFlatOptions().filter(
+    const selected = flatOptions.filter(
       (o) => optionsToSelect.includes(o) && !this.#isDisabled(o),
     );
-
-    const flatOptions = this.#getFlatOptions();
 
     for (const option of flatOptions) {
       if (selected.includes(option)) {
         this.#attributeRecorder.set(option, "aria-selected", "true");
-      } else {
+      } else if (this.#config.multiple) {
+        //  "false" tells that the option can be selected
         this.#attributeRecorder.set(option, "aria-selected", "false");
+      } else if (option.getAttribute("aria-selected") === "true") {
+        this.#attributeRecorder.remove(option, "aria-selected");
       }
     }
 
-    if (notify && !areSameElementsLists(selected, this.#selectedOptions)) {
+    if (notify && !areSameElementsLists(selected, this.#selected)) {
       triggerCustomEvent(this.host, "appret-listbox-change", {
+        option: selected[0] ?? null,
         options: selected,
       });
     }
 
-    this.#selectedOptions = selected;
+    this.#selected = selected;
+  }
+
+  //  Returns the options to select, or null when the selection should stay as it is
+  #validSelection(
+    selection: HTMLElement | HTMLElement[] | null,
+  ): HTMLElement[] | null {
+    const requested =
+      selection === null ? [] : Array.isArray(selection) ? selection : [selection];
+
+    if (!this.#config.multiple && requested.length > 1) {
+      console.warn(
+        "Appret listbox: only one option can be selected without `multiple`:",
+        requested,
+      );
+      return null;
+    }
+
+    const flatOptions = this.#getFlatOptions();
+    const unknown = requested.filter((o) => !flatOptions.includes(o));
+    if (unknown.length > 0) {
+      console.warn(
+        "Appret listbox: these options aren't among the options:",
+        unknown,
+      );
+    }
+
+    const disabled = requested.filter(
+      (o) => flatOptions.includes(o) && this.#isDisabled(o),
+    );
+    if (disabled.length > 0) {
+      console.warn("Appret listbox: can't select disabled options:", disabled);
+    }
+
+    const valid = requested.filter(
+      (o) => flatOptions.includes(o) && !this.#isDisabled(o),
+    );
+    if (requested.length > 0 && valid.length === 0) {
+      return null;
+    }
+    return valid;
   }
 
   #toggleSelectedOption(o: HTMLElement) {
-    const isAlreadySelected = this.#selectedOptions.find((s) => s === o);
-    if (!isAlreadySelected) {
+    const isSelected = this.#selected.includes(o);
+    if (!isSelected) {
       this.#lastSelectedOption = o;
     }
 
-    return this.#setSelectedOptions(
-      this.#selectedOptions.includes(o)
-        ? this.#selectedOptions.filter((s) => s !== o)
-        : [...this.#selectedOptions, o],
+    this.#setSelected(
+      isSelected ? this.#selected.filter((s) => s !== o) : [...this.#selected, o],
     );
   }
 
   #selectOptionsRange(from: number, to: number) {
     const [start, end] = from < to ? [from, to] : [to, from];
-    this.#setSelectedOptions([
-      ...this.#selectedOptions,
+    this.#setSelected([
+      ...this.#selected,
       ...this.#getFlatOptions().slice(start, end + 1),
     ]);
   }
@@ -629,9 +511,9 @@ export class ListboxController {
   }
 
   #isDisabled(option: HTMLElement): boolean {
-    const group = this.#options.groups?.find((g) => g.options.includes(option));
+    const group = this.#getGroups().find((g) => g.options.includes(option));
 
-    return [option, group?.group, this.#options.list].some(
+    return [option, group?.group, this.#config.list].some(
       (el) => el?.getAttribute("aria-disabled") === "true",
     );
   }
@@ -656,22 +538,23 @@ export class ListboxController {
     return undefined;
   }
 
-  #getFirstSelectedOption(): HTMLElement | undefined {
-    return this.#getFlatOptions().find((o) => this.selectedOptions.includes(o));
-  }
-
   #activateSelectionFromApi() {
-    const first = this.#getFirstSelectedOption();
-    if (first && !this.#options.list.matches(":focus-within")) {
+    const first = this.#selected[0];
+    if (first && !this.#config.list.matches(":focus-within")) {
       this.#setActiveOption(first);
     }
   }
 
-  #getFlatOptions() {
-    return (
-      this.#options.options ??
-      (this.#options.groups ?? []).flatMap((g) => g.options)
-    );
+  #getGroups(): ListboxGroup[] {
+    const { options } = this.#config;
+    return options.every(isGroup) ? options : [];
+  }
+
+  #getFlatOptions(): HTMLElement[] {
+    const { options } = this.#config;
+    return options.every(isGroup)
+      ? options.flatMap((g) => g.options)
+      : (options as HTMLElement[]);
   }
 
   #findOptionByText(
@@ -712,117 +595,63 @@ export class ListboxController {
   }
 
   //  API
-  selectOption(option: HTMLElement | null): void {
+  //  Replaces the selection: an option, several options with `multiple`, or null to clear it
+  select(selection: HTMLElement | HTMLElement[] | null): void {
     if (this.#destroyed) {
-      console.warn("Appret listbox: selectOption() called after destroy().");
+      console.warn("Appret listbox: select() called after destroy().");
       return;
     }
 
-    if (this.#options.multiple) {
-      this.selectOptions(option ? [option] : []);
+    const options = this.#validSelection(selection);
+    if (!options) {
       return;
     }
 
-    if (option && !this.#getFlatOptions().includes(option)) {
-      console.warn(
-        "Appret listbox: selected option is not among options:",
-        option,
-      );
-      return;
-    }
-
-    if (option && this.#isDisabled(option)) {
-      console.warn("Appret listbox: can't select a disabled option:", option);
-      return;
-    }
-
-    this.#setSelectedOption(option, { notify: false });
+    this.#setSelected(options, { notify: false });
     this.#activateSelectionFromApi();
   }
 
-  selectOptions(options: HTMLElement[]): void {
-    if (this.#destroyed) {
-      console.warn("Appret listbox: selectOptions() called after destroy().");
-      return;
-    }
-
-    if (!this.#options.multiple) {
-      console.warn(
-        "Appret listbox: selectOptions() needs multiple selection, use selectOption() instead.",
-      );
-      return;
-    }
-
-    const flatOptions = this.#getFlatOptions();
-    const missingOptions = options.filter((o) => !flatOptions.includes(o));
-    if (missingOptions.length > 0) {
-      console.warn(
-        "Appret listbox: some selected options are not among options:",
-        missingOptions,
-      );
-      return;
-    }
-
-    const disabledOptions = options.filter((o) => this.#isDisabled(o));
-    if (disabledOptions.length > 0) {
-      console.warn(
-        "Appret listbox: can't select disabled options:",
-        disabledOptions,
-      );
-      return;
-    }
-
-    this.#setSelectedOptions(options, { notify: false });
-    this.#activateSelectionFromApi();
-  }
-
-  update(changes: ListboxUpdate): void {
+  update(
+    changes: Omit<Partial<ListboxControllerConfig>, "initialSelection">,
+  ): void {
     if (this.#destroyed) {
       console.warn("Appret listbox: update() called after destroy().");
       return;
     }
 
-    const next = optionsWithCopiesLists(mergeOptions(this.#options, changes));
+    const next = copyLists({
+      ...this.#config,
+      ...changes,
+    } as ListboxControllerConfig);
 
-    this.#validateOptions(next);
+    this.#validateConfig(next);
 
-    const previousSelection = this.selectedOptions;
+    const previousSelection = this.#selected;
 
     this.#teardown();
 
-    this.#options = next;
+    this.#config = next;
 
     //  Keep the selected options that are still there and not disabled
     const selection = this.#getFlatOptions().filter(
       (o) => previousSelection.includes(o) && !this.#isDisabled(o),
     );
-    if (this.#options.multiple) {
-      this.#selectedOptions = selection;
-      this.#selectedOption = null;
-    } else {
-      this.#selectedOption = selection[0] ?? null;
-      this.#selectedOptions = [];
-    }
+    this.#selected = this.#config.multiple ? selection : selection.slice(0, 1);
 
     this.#setup();
   }
 
-  focusActiveOption(): void {
-    this.#activeOption?.focus();
+  //  Moves focus to the option reachable with Tab
+  focus(options?: FocusOptions): void {
+    this.#activeOption?.focus(options);
   }
 
   get selectedOption(): HTMLElement | null {
-    //  Returns only the first selected option when multiple is false
-    return this.#options.multiple
-      ? (this.#selectedOptions[0] ?? null)
-      : this.#selectedOption;
+    return this.#selected[0] ?? null;
   }
 
   get selectedOptions(): HTMLElement[] {
-    if (this.#options.multiple) {
-      return [...this.#selectedOptions];
-    }
-    return this.#selectedOption ? [this.#selectedOption] : [];
+    return [...this.#selected];
   }
 
   destroy(): void {
@@ -840,36 +669,6 @@ function areSameElementsLists(listA: HTMLElement[], listB: HTMLElement[]) {
   );
 }
 
-const exclusiveKeys = [
-  ["label", "labelledBy", "labelledByElements"],
-  ["options", "groups"],
-] as const;
-
-function mergeOptions(
-  current: ListboxControllerOptions,
-  changes: ListboxUpdate,
-): ListboxControllerOptions {
-  const base: Record<string, unknown> = { ...current };
-  for (const keys of exclusiveKeys) {
-    if (keys.some((key) => key in changes)) {
-      for (const key of keys) delete base[key];
-    }
-  }
-  return { ...base, ...changes } as ListboxControllerOptions;
-}
-
-//  Copy the arrays so that changes made to the author's arrays only apply on update()
-function optionsWithCopiesLists(
-  options: ListboxControllerOptions,
-): ListboxControllerOptions {
-  if (options.groups) {
-    return {
-      ...options,
-      groups: options.groups.map((g) => ({
-        ...g,
-        options: [...(g.options ?? [])],
-      })),
-    };
-  }
-  return { ...options, options: [...options.options] };
+function isGroup(option: HTMLElement | ListboxGroup): option is ListboxGroup {
+  return "group" in option;
 }

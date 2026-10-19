@@ -13,15 +13,13 @@
   import { ListboxController } from "appret/listbox";
 
   const host = document.querySelector<HTMLElement>("#listbox-basic")!;
+  const options = [...host.querySelectorAll<HTMLElement>(".list > li")];
 
   new ListboxController(host, {
     list: host.querySelector(".list")!,
-    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
-    labelledBy: "listbox-basic-label",
+    options,
+    label: { byId: "listbox-basic-label" },
     selectionFollowsFocus: true,
-    selectOptionOnListFocus: true,
-    initialSelectedOption: Array.from(
-      host.querySelectorAll<HTMLElement>(".list > li"),
-    )[2],
+    initialSelection: options[2],
   });
 </script>

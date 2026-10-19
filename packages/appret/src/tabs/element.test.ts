@@ -156,8 +156,8 @@ describe("setup", () => {
 });
 
 describe("attributes", () => {
-  it("passes label, orientation and activation to the controller", () => {
-    const element = mount(markup(undefined, 'label="Sections" orientation="vertical" activation="manual"'));
+  it("passes label, orientation and selection-follows-focus to the controller", () => {
+    const element = mount(markup(undefined, 'label="Sections" orientation="vertical" selection-follows-focus="false"'));
     const { list, tabs } = parts(element);
     expect(list.getAttribute("aria-label")).toBe("Sections");
     expect(list.getAttribute("aria-orientation")).toBe("vertical");
@@ -165,7 +165,7 @@ describe("attributes", () => {
     tabs[0]!.focus();
     press("ArrowDown");
     expect(document.activeElement).toBe(tabs[1]);
-    expect(tabs[0]!.getAttribute("aria-selected")).toBe("true"); // manual: focus only
+    expect(tabs[0]!.getAttribute("aria-selected")).toBe("true"); // focus only
   });
 
   it("passes labelledby to the controller", () => {
@@ -209,13 +209,13 @@ describe("attributes", () => {
     expect(element.selectedIndex).toBe(2);
   });
 
-  it("ignores invalid orientation and activation values with a warning", () => {
-    const element = mount(markup(undefined, 'label="Sections" orientation="diagonal" activation="sometimes"'));
+  it("ignores an invalid orientation with a warning", () => {
+    const element = mount(markup(undefined, 'label="Sections" orientation="diagonal"'));
     const { list, tabs } = parts(element);
     expect(list.hasAttribute("aria-orientation")).toBe(false);
     expect(warn).toHaveBeenCalled();
 
-    // Defaults apply: horizontal and automatic.
+    // Defaults apply: horizontal, and selection follows focus.
     tabs[0]!.focus();
     press("ArrowRight");
     expect(tabs[1]!.getAttribute("aria-selected")).toBe("true");
@@ -258,10 +258,10 @@ describe("API", () => {
     expect(element.selectedIndex).toBe(2);
   });
 
-  it("forwards focusSelectedTab()", () => {
+  it("focus() moves focus to the selected tab", () => {
     const element = mount();
     element.select(1);
-    element.focusSelectedTab();
+    element.focus();
     expect(document.activeElement).toBe(parts(element).tabs[1]);
   });
 

@@ -43,9 +43,9 @@ Pass a host element, the tab list, the tabs and their panels.
 
 ### Labelling
 
-The `label` property adds an `aria-label` attribute to the list. If the tabs must be labelled by an existing text somewhere else on the page, use `labelledBy` with the ID of a visible label.
+A text `label` adds an `aria-label` attribute to the list. If the tabs must be labelled by an existing text somewhere else on the page, use `label: { byId }` with the ID or IDs of a visible label.
 
-When the label is outside your component's shadow root where IDs can't reach, or when it has no ID, you can use `labelledByElements` and pass a list of `HTMLElement`.
+When the label is outside your component's shadow root where IDs can't reach, or when it has no ID, use `label: { byElements }` with a list of elements.
 
 <LabelledBy />
 <Code code={labelledBySource} lang="astro" />
@@ -55,9 +55,9 @@ When the label is outside your component's shadow root where IDs can't reach, or
 <Vertical />
 <Code code={verticalSource} lang="astro" />
 
-### Manual activation
+### Selecting with Enter or Space
 
-Arrow keys move focus, and <kbd>Enter</kbd> or <kbd>Space</kbd> selects.
+With `selectionFollowsFocus: false`, arrow keys move focus, and <kbd>Enter</kbd> or <kbd>Space</kbd> selects.
 
 <Manual />
 <Code code={manualSource} lang="astro" />
@@ -76,7 +76,7 @@ Tabs with `aria-disabled="true"` or `disabled` are skipped by the keyboard and c
 
 ### Selecting from code
 
-`initialSelectedTab` sets the first selection, and `select()` changes it later.
+`initialSelection` sets the first selection, and `select()` changes it later.
 Neither fires `appret-tabs-change`.
 
 <Select />
@@ -92,7 +92,7 @@ Neither fires `appret-tabs-change`.
 ### Updating tabs
 
 Change the DOM first, then call `update()` with the new lists. If the focused tab was
-removed, you are responsible for placing the focus back on the selected tab with `focusSelectedTab()`.
+removed, you are responsible for placing the focus back on the selected tab with `focus()`.
 
 <Update />
 <Code code={updateSource} lang="astro" />
@@ -100,7 +100,7 @@ removed, you are responsible for placing the focus back on the selected tab with
 ### Inside a shadow root
 
 Tabs can be slotted from the page while panels live in your component's shadow root.
-To label the tab list from outside the shadow root, pass the element with `labelledByElements`.
+To label the tab list from outside the shadow root, pass the element with `label: { byElements }`.
 
 <ShadowDom />
 <Code code={shadowDomSource} lang="astro" />
@@ -114,24 +114,18 @@ To label the tab list from outside the shadow root, pass the element with `label
 
 ## Reference
 
-### Options
+### Config
 
-| Option | Type | Default | |
+| Property | Type | Default | |
 | --- | --- | --- | --- |
 | `list` | `HTMLElement` | | The tabs container. |
 | `tabs` | `HTMLElement[]` | | The tabs. |
 | `panels` | `HTMLElement[]` | | One panel per tab in the same order. |
-| `label` | `string` | | Sets `aria-label` on the list. |
-| `labelledBy` | `string` | | Space-separated IDs. Sets `aria-labelledby`. |
-| `labelledByElements` | `Element[]` | | Labelling elements, also outside the shadow root. |
+| `label` | `string \| { byId: string } \| { byElements: Element[] }` | | A text for `aria-label`, space-separated IDs for `aria-labelledby`, or labelling elements, also outside the shadow root. |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Which arrow keys move between tabs. |
-| `activation` | `"automatic" \| "manual"` | `"automatic"` | Whether moving focus also selects the tab and opens the panel. |
+| `selectionFollowsFocus` | `boolean` | `true` | Whether moving focus also selects the tab and opens the panel. |
 | `loop` | `boolean` | `true` | Whether keyboard navigation wrap around at the ends. |
-| `initialSelectedTab` | `HTMLElement \| number` | first non-disabled tab | Tab (or index of the tab) selected at setup. |
-
-:::caution
-Use only one of `label`, `labelledBy` and `labelledByElements`.
-:::
+| `initialSelection` | `HTMLElement \| number` | first non-disabled tab | Tab (or index of the tab) selected at setup. |
 
 ### Methods and properties
 
@@ -140,8 +134,8 @@ Use only one of `label`, `labelledBy` and `labelledByElements`.
 | `select(tab \| index)` | Selects a tab. Doesn't move focus or fire an event. |
 | `selectedTab` | Gets the selected tab. |
 | `selectedIndex` | Gets the selected tab index in `tabs`. |
-| `update(options)` | Applies a new set of options (for example new `tabs` and `panels`). |
-| `focusSelectedTab()` | Moves focus to the selected tab. |
+| `update(config)` | Applies changes to the config (for example new `tabs` and `panels`). |
+| `focus()` | Moves focus to the selected tab. |
 | `destroy()` | Removes listeners and restores the original markup. |
 
 ## WAI-ARIA pattern
@@ -169,7 +163,7 @@ Requirements of the [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patt
 | <kbd>Tab</kbd> into the tab list moves focus to the active tab. | <span role="img" aria-label="Implemented">✅</span> | |
 | <kbd>Tab</kbd> from the tab list moves focus to the next element, usually the panel. | <span role="img" aria-label="Implemented">✅</span> | Panels get `tabindex="0"`, unless you set your own `tabindex`. |
 | <kbd>Left Arrow</kbd> / <kbd>Right Arrow</kbd> move to the previous / next tab, wrapping at the ends. | <span role="img" aria-label="Implemented">✅</span> | Swapped in right-to-left. Disabled tabs are skipped. `loop: false` disables wrapping. |
-| <kbd>Space</kbd> or <kbd>Enter</kbd> activate the focused tab, when tabs aren't activated on focus. | <span role="img" aria-label="Implemented">✅</span> | With `activation: "manual"` |
+| <kbd>Space</kbd> or <kbd>Enter</kbd> activate the focused tab, when tabs aren't activated on focus. | <span role="img" aria-label="Implemented">✅</span> | With `selectionFollowsFocus: false` |
 | <kbd>Shift</kbd> + <kbd>F10</kbd> opens the tab's popup menu, if any. (Optional) | <span role="img" aria-label="Left to the author">❌</span> | The popup belongs to your code, the controller leaves it untouched. |
 | <kbd>Home</kbd> moves to the first tab. (Optional) | <span role="img" aria-label="Implemented">✅</span> | Skips disabled tabs. |
 | <kbd>End</kbd> moves to the last tab. (Optional) | <span role="img" aria-label="Implemented">✅</span> | Skips disabled tabs. |

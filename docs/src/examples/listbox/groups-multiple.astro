@@ -29,12 +29,12 @@
 
   new ListboxController(host, {
     list: host.querySelector(".list")!,
-    labelledBy: "listbox-groups-multiple-label",
+    label: { byId: "listbox-groups-multiple-label" },
     multiple: true,
-    groups: [...host.querySelectorAll<HTMLElement>(".group")].map((group) => ({
+    options: [...host.querySelectorAll<HTMLElement>(".group")].map((group) => ({
       group,
       options: [...group.querySelectorAll<HTMLElement>("li:not(.label)")],
-      labelledByElements: [group.querySelector(".label")!],
+      label: { byElements: [group.querySelector(".label")!] },
     })),
   });
 </script>

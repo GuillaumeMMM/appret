@@ -19,8 +19,8 @@
   new ListboxController(host, {
     list: host.querySelector(".list")!,
     options,
-    labelledBy: "listbox-multiple-label",
+    label: { byId: "listbox-multiple-label" },
     multiple: true,
-    initialSelectedOptions: [options[0]!, options[1]!],
+    initialSelection: [options[0]!, options[1]!],
   });
 </script>

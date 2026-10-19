@@ -70,7 +70,7 @@ Tabs can be added or removed after the element was connected to the DOM and init
 | `label` | text | | Label of the tab list. |
 | `labelledby` | IDs | | IDs of visible elements labelling the tab list. |
 | `orientation` | `horizontal`, `vertical` | `horizontal` | |
-| `activation` | `automatic`, `manual` | `automatic` | |
+| `selection-follows-focus` | `false` | `true` | Whether moving focus also selects the tab. |
 | `loop` | `false` | `true` | Whether keyboard navigation wrap around at the ends. |
 
 ### Properties and methods
@@ -80,7 +80,7 @@ Tabs can be added or removed after the element was connected to the DOM and init
 | `select(tab \| index)` | Selects a tab. |
 | `selectedTab` | Get the selected tab. `null` when there is none. |
 | `selectedIndex` | Get the selected tab's index. `-1` when there is none. Setting it selects a tab. |
-| `focusSelectedTab()` | Moves focus to the selected tab. |
+| `focus()` | Moves focus to the selected tab. |
 
 ## WAI-ARIA pattern
 

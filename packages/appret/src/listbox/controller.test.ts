@@ -10,7 +10,7 @@ import {
 } from "vitest";
 import {
   ListboxController,
-  type ListboxControllerOptions,
+  type ListboxControllerConfig,
 } from "./controller.js";
 
 const fruits = ["Apple", "Avocado", "Banana", "Blueberry", "Cherry"];
@@ -21,7 +21,7 @@ type Setup = {
   dir?: "ltr" | "rtl";
   selectedIndex?: number;
   selectedIndexes?: number[];
-  config?: Partial<ListboxControllerOptions>;
+  config?: Partial<ListboxControllerConfig>;
 };
 
 let controllers: ListboxController[] = [];
@@ -54,14 +54,14 @@ function setup({
     options: items,
     label: "Fruit",
     ...(selectedIndex !== undefined && {
-      initialSelectedOption: items[selectedIndex],
+      initialSelection: items[selectedIndex],
     }),
     ...(selectedIndexes && {
       multiple: true,
-      initialSelectedOptions: selectedIndexes.map((i) => items[i]),
+      initialSelection: selectedIndexes.map((i) => items[i]),
     }),
     ...config,
-  } as ListboxControllerOptions);
+  } as ListboxControllerConfig);
   controllers.push(controller);
 
   return { host, list, items, controller };
@@ -69,7 +69,7 @@ function setup({
 
 type GroupsSetup = {
   disabledGroups?: number[];
-  config?: Partial<ListboxControllerOptions>;
+  config?: Partial<ListboxControllerConfig>;
 };
 
 const meals: [string, string[]][] = [
@@ -103,13 +103,13 @@ function setupGroups({ disabledGroups = [], config = {} }: GroupsSetup = {}) {
   const controller = new ListboxController(host, {
     list,
     label: "Meal",
-    groups: groups.map(({ group, heading, options }) => ({
+    options: groups.map(({ group, heading, options }) => ({
       group,
       options,
-      labelledBy: heading.id,
+      label: { byId: heading.id },
     })),
     ...config,
-  } as ListboxControllerOptions);
+  } as ListboxControllerConfig);
   controllers.push(controller);
 
   return {
@@ -186,7 +186,7 @@ describe("roles, states and properties", () => {
     heading.id = "fruit-heading";
     document.body.append(heading);
     const { list } = setup({
-      config: { label: undefined, labelledBy: "fruit-heading" },
+      config: { label: { byId: "fruit-heading" } },
     });
     expect(list.getAttribute("aria-labelledby")).toBe("fruit-heading");
     expect(heading.hasAttribute("role")).toBe(false);
@@ -252,26 +252,25 @@ describe("single selection", () => {
     expect(items[0]!.hasAttribute("aria-selected")).toBe(false);
   });
 
-  it("warns and selects nothing when initialSelectedOption is disabled", () => {
+  it("warns and selects nothing when initialSelection is disabled", () => {
     const { items } = setup({
       disabled: [2],
       selectedIndex: 2,
     });
     expect(selected(items)).toEqual([]);
     expect(tabStops(items)).toEqual([0]);
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("disabled"),
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("disabled"), [
       items[2],
-    );
+    ]);
   });
 
-  it("warns when initialSelectedOption isn't one of the options", () => {
-    const { items } = setup({
-      config: { initialSelectedOption: document.createElement("li") },
-    });
+  it("warns when initialSelection isn't one of the options", () => {
+    const outsider = document.createElement("li");
+    const { items } = setup({ config: { initialSelection: outsider } });
     expect(selected(items)).toEqual([]);
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("not among the options"),
+      expect.stringContaining("aren't among the options"),
+      [outsider],
     );
   });
 
@@ -323,7 +322,7 @@ describe("single selection", () => {
       const { host, items } = setup();
       const details = changes(host);
       items[1]!.click();
-      expect(details).toEqual([{ option: items[1] }]);
+      expect(details).toEqual([{ option: items[1], options: [items[1]] }]);
     });
 
     it("doesn't fire when the selected option is selected again", () => {
@@ -341,7 +340,7 @@ describe("single selection", () => {
         details.push(e.detail),
       );
       items[1]!.click();
-      expect(details).toEqual([{ option: items[1] }]);
+      expect(details).toEqual([{ option: items[1], options: [items[1]] }]);
     });
   });
 });
@@ -548,6 +547,7 @@ describe("keyboard", () => {
   describe("selectionFollowsFocus", () => {
     it("selects the option focus moves to", () => {
       const { host, items } = setup({
+        selectedIndex: 0,
         config: { selectionFollowsFocus: true },
       });
       const details = changes(host);
@@ -556,7 +556,27 @@ describe("keyboard", () => {
       expect(selected(items)).toEqual([1]);
       press("End");
       expect(selected(items)).toEqual([4]);
-      expect(details).toEqual([{ option: items[1] }, { option: items[4] }]);
+      expect(details).toEqual([
+        { option: items[1], options: [items[1]] },
+        { option: items[4], options: [items[4]] },
+      ]);
+    });
+
+    it("selects the option that gets focus when focus enters the listbox", () => {
+      const { host, items } = setup({ config: { selectionFollowsFocus: true } });
+      const details = changes(host);
+      items[0]!.focus();
+      expect(selected(items)).toEqual([0]);
+      expect(details).toEqual([{ option: items[0], options: [items[0]] }]);
+    });
+
+    it("doesn't change an existing selection when focus enters the listbox", () => {
+      const { items } = setup({
+        selectedIndex: 2,
+        config: { selectionFollowsFocus: true },
+      });
+      items[0]!.focus();
+      expect(selected(items)).toEqual([2]);
     });
 
     it("doesn't select disabled options, since focus skips them", () => {
@@ -570,37 +590,10 @@ describe("keyboard", () => {
     });
   });
 
-  describe("selectOptionOnListFocus", () => {
-    it("selects the option that gets focus when focus enters the listbox", () => {
-      const { items } = setup({ config: { selectOptionOnListFocus: true } });
-      items[0]!.focus();
-      expect(selected(items)).toEqual([0]);
-    });
-
-    it("doesn't change an existing selection", () => {
-      const { items } = setup({
-        selectedIndex: 2,
-        config: { selectOptionOnListFocus: true },
-      });
-      items[2]!.focus();
-      press("ArrowDown");
-      expect(selected(items)).toEqual([2]);
-    });
-
-    it("doesn't make the arrows select", () => {
-      const { items } = setup({ config: { selectOptionOnListFocus: true } });
-      items[0]!.focus();
-      press("ArrowDown");
-      press("ArrowDown");
-      expect(selected(items)).toEqual([0]);
-      expect(focused(items)).toBe(2);
-    });
-
-    it("is off by default", () => {
-      const { items } = setup();
-      items[0]!.focus();
-      expect(selected(items)).toEqual([]);
-    });
+  it("doesn't select on focus by default", () => {
+    const { items } = setup();
+    items[0]!.focus();
+    expect(selected(items)).toEqual([]);
   });
 });
 
@@ -722,8 +715,8 @@ describe("type-ahead", () => {
 });
 
 describe("multiple selection", () => {
-  const multiple = (config: Partial<ListboxControllerOptions> = {}) =>
-    ({ multiple: true, ...config }) as Partial<ListboxControllerOptions>;
+  const multiple = (config: Partial<ListboxControllerConfig> = {}) =>
+    ({ multiple: true, ...config }) as Partial<ListboxControllerConfig>;
 
   it("sets aria-selected false on the options that aren't selected", () => {
     const { items } = setup({ config: multiple() });
@@ -746,7 +739,7 @@ describe("multiple selection", () => {
     expect(tabStops(items)).toEqual([1]);
   });
 
-  it("warns about initialSelectedOptions that are disabled or not among the options", () => {
+  it("warns about initialSelection options that are disabled or not among the options", () => {
     const outsider = document.createElement("li");
     const list = document.createElement("ul");
     const items = fruits.map((text) => {
@@ -763,12 +756,12 @@ describe("multiple selection", () => {
         options: items,
         label: "Fruit",
         multiple: true,
-        initialSelectedOptions: [items[0]!, items[2]!, outsider],
+        initialSelection: [items[0]!, items[2]!, outsider],
       }),
     );
     expect(selected(items)).toEqual([0]);
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("not among the options"),
+      expect.stringContaining("aren't among the options"),
       [outsider],
     );
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("disabled"), [
@@ -961,8 +954,8 @@ describe("multiple selection", () => {
       items[3]!.click();
       items[1]!.click();
       expect(details).toEqual([
-        { options: [items[3]] },
-        { options: [items[1], items[3]] },
+        { option: items[3], options: [items[3]] },
+        { option: items[1], options: [items[1], items[3]] },
       ]);
     });
 
@@ -971,7 +964,7 @@ describe("multiple selection", () => {
       const details = changes(host);
       items[1]!.click();
       items[1]!.click();
-      expect(details.at(-1)).toEqual({ options: [] });
+      expect(details.at(-1)).toEqual({ option: null, options: [] });
     });
 
     it("doesn't fire when the selection doesn't change", () => {
@@ -1018,7 +1011,7 @@ describe("groups", () => {
       new ListboxController(list, {
         list,
         label: "Meal",
-        groups: groups.map(({ group, options }, i) => ({
+        options: groups.map(({ group, options }, i) => ({
           group,
           options,
           label: meals[i]![0],
@@ -1098,7 +1091,7 @@ describe("errors and warnings", () => {
       () =>
         new ListboxController(document.createElement("div"), {
           options: [document.createElement("li")],
-        } as unknown as ListboxControllerOptions),
+        } as unknown as ListboxControllerConfig),
     ).toThrow("`list` is required");
   });
 
@@ -1115,24 +1108,24 @@ describe("errors and warnings", () => {
         new ListboxController(list, {
           list,
           label: "Empty",
-          groups: [{ group, options: [] }],
+          options: [{ group, options: [] }],
         }),
     ).toThrow("no options found");
   });
 
-  it("throws when both options and groups are passed", () => {
-    const list = document.createElement("ul");
-    const option = document.createElement("li");
-    const group = document.createElement("li");
-    list.append(group);
-    group.append(option);
+  it("throws when options mixes options and groups", () => {
+    const list = document.createElement("div");
+    const option = document.createElement("div");
+    const group = document.createElement("ul");
+    const grouped = document.createElement("li");
+    group.append(grouped);
+    list.append(option, group);
     expect(
       () =>
         new ListboxController(list, {
           list,
-          options: [option],
-          groups: [{ group, options: [option] }],
-        } as unknown as ListboxControllerOptions),
+          options: [option, { group, options: [grouped] }],
+        } as unknown as ListboxControllerConfig),
     ).toThrow("not both");
   });
 
@@ -1179,7 +1172,7 @@ describe("errors and warnings", () => {
       new ListboxController(list, {
         list,
         label: "Meal",
-        groups: [{ group: first, options: [option, misplaced], label: "One" }],
+        options: [{ group: first, options: [option, misplaced], label: "One" }],
       }),
     );
     expect(warn).toHaveBeenCalledWith(
@@ -1203,7 +1196,7 @@ describe("errors and warnings", () => {
       new ListboxController(list, {
         list,
         label: "Meal",
-        groups: [
+        options: [
           { group, options: [option], label: "One" },
           { group: empty, options: [], label: "Two" },
           { group: outside, options: [outsideOption], label: "Three" },
@@ -1245,7 +1238,7 @@ describe("errors and warnings", () => {
       new ListboxController(list, {
         list,
         label: "Meal",
-        groups: [{ group, options: [option] }],
+        options: [{ group, options: [option] }],
       }),
     );
     expect(warn).toHaveBeenCalledWith(
@@ -1254,24 +1247,33 @@ describe("errors and warnings", () => {
     );
   });
 
-  it("warns about labelledBy IDs that don't exist in the listbox's root", () => {
-    setup({ config: { label: undefined, labelledBy: "nowhere elsewhere" } });
+  it("warns about label IDs that don't exist in the listbox's root", () => {
+    setup({ config: { label: { byId: "nowhere elsewhere" } } });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("ID missing"), [
       "nowhere",
       "elsewhere",
     ]);
   });
 
+  it("treats blank label IDs as no label", () => {
+    const { list } = setup({ config: { label: { byId: "  " } } });
+    expect(list.hasAttribute("aria-labelledby")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("missing an accessible label"),
+      list,
+    );
+  });
+
   it("doesn't warn for a working setup", () => {
     setup();
     setupGroups();
-    setup({ config: { multiple: true, initialSelectedOptions: [] } });
+    setup({ config: { multiple: true, initialSelection: [] } });
     expect(warn).not.toHaveBeenCalled();
   });
 });
 
 describe("shadow DOM", () => {
-  function setupInShadowRoot(labelledBy: string) {
+  function setupInShadowRoot(byId: string) {
     const component = document.createElement("div");
     document.body.append(component);
     const root = component.attachShadow({ mode: "open" });
@@ -1279,18 +1281,22 @@ describe("shadow DOM", () => {
     const list = root.querySelector("ul")!;
     const items = [...root.querySelectorAll("li")];
     controllers.push(
-      new ListboxController(component, { list, options: items, labelledBy }),
+      new ListboxController(component, {
+        list,
+        options: items,
+        label: { byId },
+      }),
     );
     return { root, list, items };
   }
 
-  it("finds labelledBy IDs in the listbox's shadow root", () => {
+  it("finds label IDs in the listbox's shadow root", () => {
     const { list } = setupInShadowRoot("inner-label");
     expect(list.getAttribute("aria-labelledby")).toBe("inner-label");
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it("warns about labelledBy IDs that are only in the page", () => {
+  it("warns about label IDs that are only in the page", () => {
     const heading = document.createElement("h2");
     heading.id = "page-label";
     document.body.append(heading);
@@ -1314,7 +1320,7 @@ describe("shadow DOM", () => {
   });
 });
 
-describe("labelledByElements", () => {
+describe("label elements", () => {
   let uninstall: () => void;
 
   beforeAll(() => {
@@ -1328,7 +1334,7 @@ describe("labelledByElements", () => {
     const heading = document.createElement("h2");
     document.body.append(heading);
     const { list } = setup({
-      config: { label: undefined, labelledByElements: [heading] },
+      config: { label: { byElements: [heading] } },
     });
     expect(list.ariaLabelledByElements).toEqual([heading]);
     expect(warn).not.toHaveBeenCalled();
@@ -1343,7 +1349,7 @@ describe("labelledByElements", () => {
       new ListboxController(list, {
         list,
         options: items,
-        labelledByElements: [heading],
+        label: { byElements: [heading] },
       }),
     );
     expect(heading.getAttribute("role")).toBe("presentation");
@@ -1355,7 +1361,7 @@ describe("labelledByElements", () => {
     const root = component.attachShadow({ mode: "open" });
     const hidden = document.createElement("span");
     root.append(hidden);
-    setup({ config: { label: undefined, labelledByElements: [hidden] } });
+    setup({ config: { label: { byElements: [hidden] } } });
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("inside another shadow root"),
       [hidden],
@@ -1363,10 +1369,10 @@ describe("labelledByElements", () => {
   });
 });
 
-describe("selectOption()", () => {
+describe("select()", () => {
   it("selects an option", () => {
     const { items, controller } = setup();
-    controller.selectOption(items[2]!);
+    controller.select(items[2]!);
     expect(selected(items)).toEqual([2]);
     expect(controller.selectedOption).toBe(items[2]);
     expect(controller.selectedOptions).toEqual([items[2]]);
@@ -1374,7 +1380,7 @@ describe("selectOption()", () => {
 
   it("clears the selection with null", () => {
     const { items, controller } = setup({ selectedIndex: 2 });
-    controller.selectOption(null);
+    controller.select(null);
     expect(selected(items)).toEqual([]);
     expect(items[2]!.hasAttribute("aria-selected")).toBe(false);
     expect(controller.selectedOption).toBeNull();
@@ -1384,13 +1390,13 @@ describe("selectOption()", () => {
   it("doesn't fire appret-listbox-change", () => {
     const { host, items, controller } = setup();
     const details = changes(host);
-    controller.selectOption(items[2]!);
+    controller.select(items[2]!);
     expect(details).toEqual([]);
   });
 
   it("moves the tab stop to the selected option", () => {
     const { items, controller } = setup();
-    controller.selectOption(items[3]!);
+    controller.select(items[3]!);
     expect(tabStops(items)).toEqual([3]);
   });
 
@@ -1398,56 +1404,56 @@ describe("selectOption()", () => {
     const { items, controller } = setup();
     items[0]!.focus();
     press("ArrowDown");
-    controller.selectOption(items[3]!);
+    controller.select(items[3]!);
     expect(tabStops(items)).toEqual([1]);
     expect(focused(items)).toBe(1);
   });
 
   it("keeps the tab stop when the selection is cleared", () => {
     const { items, controller } = setup({ selectedIndex: 2 });
-    controller.selectOption(null);
+    controller.select(null);
     expect(tabStops(items)).toEqual([2]);
   });
 
   it("doesn't move focus", () => {
     const { items, controller } = setup();
     items[0]!.focus();
-    controller.selectOption(items[3]!);
+    controller.select(items[3]!);
     expect(focused(items)).toBe(0);
   });
 
   it("warns and ignores an element that isn't one of the options", () => {
     const { items, controller } = setup({ selectedIndex: 1 });
-    controller.selectOption(document.createElement("li"));
+    const outsider = document.createElement("li");
+    controller.select(outsider);
     expect(selected(items)).toEqual([1]);
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("not among options"),
-      expect.any(HTMLElement),
+      expect.stringContaining("aren't among the options"),
+      [outsider],
     );
   });
 
   it("warns and ignores a disabled option", () => {
     const { items, controller } = setup({ disabled: [2], selectedIndex: 1 });
-    controller.selectOption(items[2]!);
+    controller.select(items[2]!);
     expect(selected(items)).toEqual([1]);
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("disabled"),
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("disabled"), [
       items[2],
-    );
+    ]);
   });
 
   it("replaces the selection with that option in multiple selection", () => {
     const { items, controller } = setup({ selectedIndexes: [0, 1] });
-    controller.selectOption(items[3]!);
+    controller.select(items[3]!);
     expect(selected(items)).toEqual([3]);
-    controller.selectOption(null);
+    controller.select(null);
     expect(selected(items)).toEqual([]);
   });
 
   it("warns and does nothing after destroy()", () => {
     const { items, controller } = setup();
     controller.destroy();
-    controller.selectOption(items[1]!);
+    controller.select(items[1]!);
     expect(items[1]!.hasAttribute("aria-selected")).toBe(false);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("after destroy()"),
@@ -1455,10 +1461,10 @@ describe("selectOption()", () => {
   });
 });
 
-describe("selectOptions()", () => {
+describe("select() with multiple selection", () => {
   it("replaces the selection", () => {
     const { items, controller } = setup({ selectedIndexes: [0] });
-    controller.selectOptions([items[4]!, items[2]!]);
+    controller.select([items[4]!, items[2]!]);
     expect(selected(items)).toEqual([2, 4]);
     expect(controller.selectedOptions).toEqual([items[2], items[4]]);
     expect(controller.selectedOption).toBe(items[2]);
@@ -1466,7 +1472,7 @@ describe("selectOptions()", () => {
 
   it("clears the selection with an empty array", () => {
     const { items, controller } = setup({ selectedIndexes: [0, 1] });
-    controller.selectOptions([]);
+    controller.select([]);
     expect(selected(items)).toEqual([]);
     expect(items[0]!.getAttribute("aria-selected")).toBe("false");
   });
@@ -1474,45 +1480,61 @@ describe("selectOptions()", () => {
   it("doesn't fire appret-listbox-change", () => {
     const { host, items, controller } = setup({ selectedIndexes: [] });
     const details = changes(host);
-    controller.selectOptions([items[1]!]);
+    controller.select([items[1]!]);
     expect(details).toEqual([]);
   });
 
   it("moves the tab stop to the first selected option", () => {
     const { items, controller } = setup({ selectedIndexes: [] });
-    controller.selectOptions([items[4]!, items[2]!]);
+    controller.select([items[4]!, items[2]!]);
     expect(tabStops(items)).toEqual([2]);
   });
 
-  it("warns and ignores options that aren't among the options", () => {
+  it("warns about options that aren't among the options and selects the others", () => {
     const { items, controller } = setup({ selectedIndexes: [0] });
     const outsider = document.createElement("li");
-    controller.selectOptions([items[1]!, outsider]);
-    expect(selected(items)).toEqual([0]);
+    controller.select([items[1]!, outsider]);
+    expect(selected(items)).toEqual([1]);
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("not among options"),
+      expect.stringContaining("aren't among the options"),
       [outsider],
     );
   });
 
-  it("warns and ignores disabled options", () => {
+  it("warns about disabled options and selects the others", () => {
     const { items, controller } = setup({
       disabled: [2],
       selectedIndexes: [0],
     });
-    controller.selectOptions([items[1]!, items[2]!]);
-    expect(selected(items)).toEqual([0]);
+    controller.select([items[1]!, items[2]!]);
+    expect(selected(items)).toEqual([1]);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("disabled"), [
       items[2],
     ]);
   });
 
-  it("warns and does nothing in single selection", () => {
+  it("keeps the selection when none of the options can be selected", () => {
+    const { items, controller } = setup({
+      disabled: [2],
+      selectedIndexes: [0],
+    });
+    controller.select([items[2]!, document.createElement("li")]);
+    expect(selected(items)).toEqual([0]);
+  });
+
+  it("accepts an array of one option in single selection", () => {
     const { items, controller } = setup();
-    controller.selectOptions([items[1]!]);
-    expect(selected(items)).toEqual([]);
+    controller.select([items[1]!]);
+    expect(selected(items)).toEqual([1]);
+  });
+
+  it("warns and does nothing with several options in single selection", () => {
+    const { items, controller } = setup({ selectedIndex: 0 });
+    controller.select([items[1]!, items[2]!]);
+    expect(selected(items)).toEqual([0]);
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("needs multiple selection"),
+      expect.stringContaining("only one option can be selected"),
+      [items[1], items[2]],
     );
   });
 
@@ -1525,7 +1547,7 @@ describe("selectOptions()", () => {
   it("warns and does nothing after destroy()", () => {
     const { items, controller } = setup({ selectedIndexes: [] });
     controller.destroy();
-    controller.selectOptions([items[1]!]);
+    controller.select([items[1]!]);
     expect(items[1]!.hasAttribute("aria-selected")).toBe(false);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("after destroy()"),
@@ -1688,14 +1710,14 @@ describe("update()", () => {
     });
   });
 
-  describe("options", () => {
+  describe("config", () => {
     it("can switch from options to groups", () => {
       const { list, controller, items } = setup();
       const group = document.createElement("ul");
       group.append(...items.slice(0, 2));
       list.prepend(group);
       controller.update({
-        groups: [{ group, options: items.slice(0, 2), label: "Favourites" }],
+        options: [{ group, options: items.slice(0, 2), label: "Favourites" }],
       });
       expect(group.getAttribute("role")).toBe("group");
       expect(items[2]!.hasAttribute("role")).toBe(false);
@@ -1718,19 +1740,19 @@ describe("update()", () => {
       expect(focused(items)).toBe(1);
     });
 
-    it("keeps options that aren't passed", () => {
+    it("keeps settings that aren't passed", () => {
       const { list, controller } = setup({ config: { orientation: "horizontal" } });
       controller.update({ label: "Fruits" });
       expect(list.getAttribute("aria-orientation")).toBe("horizontal");
       expect(list.getAttribute("aria-label")).toBe("Fruits");
     });
 
-    it("replaces label with labelledBy", () => {
+    it("replaces a text label with label IDs", () => {
       const heading = document.createElement("h2");
       heading.id = "fruit-heading";
       document.body.append(heading);
       const { list, controller } = setup();
-      controller.update({ labelledBy: "fruit-heading" });
+      controller.update({ label: { byId: "fruit-heading" } });
       expect(list.hasAttribute("aria-label")).toBe(false);
       expect(list.getAttribute("aria-labelledby")).toBe("fruit-heading");
     });
@@ -1760,10 +1782,10 @@ describe("update()", () => {
   });
 });
 
-describe("focusActiveOption()", () => {
+describe("focus()", () => {
   it("moves focus to the active option", () => {
     const { items, controller } = setup({ selectedIndex: 3 });
-    controller.focusActiveOption();
+    controller.focus();
     expect(focused(items)).toBe(3);
   });
 
@@ -1773,7 +1795,7 @@ describe("focusActiveOption()", () => {
     press("End");
     items[4]!.remove();
     controller.update({ options: items.slice(0, 4) });
-    controller.focusActiveOption();
+    controller.focus();
     expect(focused(items)).toBe(0);
   });
 });
@@ -1791,7 +1813,7 @@ describe("destroy()", () => {
       options: items,
       label: "Fruit",
       orientation: "horizontal",
-      initialSelectedOption: items[1],
+      initialSelection: items[1],
     });
     items[2]!.click();
     controller.destroy();

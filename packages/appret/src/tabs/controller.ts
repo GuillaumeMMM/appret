@@ -1,22 +1,19 @@
 import { AttributeRecorder } from "../shared/attributeRecorder.js";
+import { copyLists } from "../shared/copyLists.js";
 import { triggerCustomEvent } from "../shared/customEvents.js";
-import { flatTreeContains, isTreeRoot } from "../shared/tree.js";
+import { setLabel, type Label } from "../shared/label.js";
+import { flatTreeContains } from "../shared/tree.js";
 
-type TabsLabel =
-  | { label?: string; labelledBy?: never; labelledByElements?: never }
-  | { labelledBy?: string; label?: never; labelledByElements?: never }
-  | { labelledByElements?: Element[]; label?: never; labelledBy?: never };
-
-export type TabsControllerOptions = {
+export type TabsControllerConfig = {
   list: HTMLElement;
   tabs: HTMLElement[];
   panels: HTMLElement[];
-} & TabsLabel & {
-    orientation?: "horizontal" | "vertical";
-    initialSelectedTab?: HTMLElement | number;
-    activation?: "manual" | "automatic";
-    loop?: boolean;
-  };
+  label?: Label;
+  orientation?: "horizontal" | "vertical";
+  initialSelection?: HTMLElement | number;
+  selectionFollowsFocus?: boolean;
+  loop?: boolean;
+};
 
 export type TabsChangeDetail = {
   tab: HTMLElement;
@@ -32,49 +29,30 @@ declare global {
   }
 }
 
-const labelKeys = ["label", "labelledBy", "labelledByElements"] as const;
-
-//  Merge updated options to make sure a new label key takes precedence
-function mergeOptions(
-  current: TabsControllerOptions,
-  changes: Omit<Partial<TabsControllerOptions>, "initialSelectedTab">,
-): TabsControllerOptions {
-  const base: Partial<TabsControllerOptions> = { ...current };
-  if (labelKeys.some((key) => key in changes)) {
-    for (const key of labelKeys) delete base[key];
-  }
-  return { ...base, ...changes } as TabsControllerOptions;
-}
-
 export class TabsController {
   readonly host: HTMLElement;
-  #options: TabsControllerOptions;
+  #config: TabsControllerConfig;
   #attributeRecorder = new AttributeRecorder();
   #abort!: AbortController;
   #destroyed = false;
   #selectedTab: HTMLElement;
 
-  constructor(host: HTMLElement, options: TabsControllerOptions) {
+  constructor(host: HTMLElement, config: TabsControllerConfig) {
     this.host = host;
-    this.#validateOptions(options);
+    this.#validateConfig(config);
 
-    //  Create a copy of tabs and panels to avoid side effects
-    this.#options = {
-      ...options,
-      tabs: [...options.tabs],
-      panels: [...options.panels],
-    };
+    this.#config = copyLists(config);
 
-    const { tabs, initialSelectedTab } = this.#options;
+    const { tabs, initialSelection } = this.#config;
 
     const initialTab =
-      typeof initialSelectedTab === "number"
-        ? tabs[initialSelectedTab]
-        : initialSelectedTab;
+      typeof initialSelection === "number"
+        ? tabs[initialSelection]
+        : initialSelection;
     const isInitialSelectedTabValid =
       initialTab !== undefined && tabs.includes(initialTab);
 
-    if (initialSelectedTab !== undefined && !isInitialSelectedTabValid) {
+    if (initialSelection !== undefined && !isInitialSelectedTabValid) {
       console.warn("Appret tabs: the initial selected tab is not among tabs.");
     }
 
@@ -99,8 +77,8 @@ export class TabsController {
     this.#setSelectedTab(this.#selectedTab);
   }
 
-  #validateOptions(newOptions: TabsControllerOptions) {
-    const { tabs, panels, list } = newOptions;
+  #validateConfig(newConfig: TabsControllerConfig) {
+    const { tabs, panels, list } = newConfig;
 
     if (tabs.length === 0) {
       throw new Error("Appret tabs: no tabs found.");
@@ -117,22 +95,22 @@ export class TabsController {
   }
 
   #setAriaRoles() {
-    this.#attributeRecorder.set(this.#options.list, "role", "tablist");
+    this.#attributeRecorder.set(this.#config.list, "role", "tablist");
 
-    for (const tab of this.#options.tabs) {
+    for (const tab of this.#config.tabs) {
       this.#attributeRecorder.set(tab, "role", "tab");
 
       if (tab instanceof HTMLButtonElement && !tab.hasAttribute("type")) {
         this.#attributeRecorder.set(tab, "type", "button");
       }
     }
-    for (const panel of this.#options.panels) {
+    for (const panel of this.#config.panels) {
       this.#attributeRecorder.set(panel, "role", "tabpanel");
     }
   }
 
   #setFocusablePanels() {
-    for (const panel of this.#options.panels) {
+    for (const panel of this.#config.panels) {
       if (!panel.getAttribute("tabindex")) {
         this.#attributeRecorder.set(panel, "tabindex", "0");
       }
@@ -140,8 +118,8 @@ export class TabsController {
   }
 
   #setTabPanelLink() {
-    for (const [i, tab] of this.#options.tabs.entries()) {
-      const panel = this.#options.panels[i]!;
+    for (const [i, tab] of this.#config.tabs.entries()) {
+      const panel = this.#config.panels[i]!;
 
       if (tab.getRootNode() === panel.getRootNode()) {
         this.#attributeRecorder.set(
@@ -176,70 +154,19 @@ export class TabsController {
   }
 
   #setLabels() {
-    const { list, label, labelledBy, labelledByElements } = this.#options;
-
-    if (label) {
-      this.#attributeRecorder.set(list, "aria-label", label);
-      return;
-    }
-
-    if (labelledBy) {
-      this.#attributeRecorder.set(list, "aria-labelledby", labelledBy);
-      const root = list.getRootNode();
-      if (isTreeRoot(root)) {
-        const unreachableIds = labelledBy
-          .trim()
-          .split(/\s+/)
-          .filter((id) => !root.getElementById(id));
-
-        if (unreachableIds.length > 0) {
-          console.warn(
-            "Appret tabs: ID missing in the tablist's document or shadow root:",
-            unreachableIds,
-          );
-        }
-      }
-      return;
-    }
-
-    if (labelledByElements?.length) {
-      this.#attributeRecorder.setElements(
-        list,
-        "ariaLabelledByElements",
-        labelledByElements,
-      );
-
-      //  Label elements might be dropped when they are in another shadow root
-      const listAriaLabelledElements = list.ariaLabelledByElements;
-      const dropped = labelledByElements.filter(
-        (el) => !(listAriaLabelledElements ?? []).includes(el),
-      );
-
-      if (dropped.length > 0) {
-        console.warn(
-          "Appret tabs: these labelledByElements can't label the tablist because they're inside another shadow root:",
-          dropped,
-        );
-      }
-      return;
-    }
-
-    //  If the list has no accessible labels in the end (labels may have been added in other ways)
-    if (
-      !list.getAttribute("aria-label") &&
-      !list.getAttribute("aria-labelledby") &&
-      !list.ariaLabelledByElements?.length
-    ) {
-      console.warn("Appret tabs: the tablist is missing an accessible label.");
-    }
+    setLabel(this.#config.list, this.#config.label, {
+      recorder: this.#attributeRecorder,
+      prefix: "Appret tabs",
+      name: "tablist",
+    });
   }
 
   #setOrientation() {
-    if (this.#options.orientation) {
+    if (this.#config.orientation) {
       this.#attributeRecorder.set(
-        this.#options.list,
+        this.#config.list,
         "aria-orientation",
-        this.#options.orientation,
+        this.#config.orientation,
       );
     }
   }
@@ -247,8 +174,8 @@ export class TabsController {
   #setSelectedTab(tabToSelect: HTMLElement, { notify = true } = {}) {
     let selectedIndex = 0;
 
-    for (const [i, tab] of this.#options.tabs.entries()) {
-      const panel = this.#options.panels[i]!;
+    for (const [i, tab] of this.#config.tabs.entries()) {
+      const panel = this.#config.panels[i]!;
 
       if (tab === tabToSelect) {
         selectedIndex = i;
@@ -266,7 +193,7 @@ export class TabsController {
     if (notify && tabToSelect !== this.#selectedTab) {
       triggerCustomEvent(this.host, "appret-tabs-change", {
         tab: tabToSelect,
-        panel: this.#options.panels[selectedIndex]!,
+        panel: this.#config.panels[selectedIndex]!,
         index: selectedIndex,
       });
     }
@@ -275,7 +202,7 @@ export class TabsController {
   }
 
   #setListeners() {
-    const { tabs, orientation } = this.#options;
+    const { tabs, orientation } = this.#config;
 
     for (const [i, tab] of tabs.entries()) {
       tab.addEventListener(
@@ -308,7 +235,7 @@ export class TabsController {
 
           const previousTab = this.#findEnabledTab(i, -1);
           const nextTab = this.#findEnabledTab(i, 1);
-          const rtl = getComputedStyle(this.#options.list).direction === "rtl";
+          const rtl = getComputedStyle(this.#config.list).direction === "rtl";
 
           let target;
 
@@ -347,14 +274,14 @@ export class TabsController {
             e.preventDefault();
             target.focus();
 
-            //  When activation is manual the keyboard events only move the focus
-            if (this.#options.activation !== "manual") {
+            //  Without selectionFollowsFocus the keyboard events only move the focus
+            if (this.#config.selectionFollowsFocus !== false) {
               this.#setSelectedTab(target);
             }
           }
 
           if (
-            this.#options.activation === "manual" &&
+            this.#config.selectionFollowsFocus === false &&
             (e.key === "Enter" || e.key === " ") &&
             !(tab instanceof HTMLButtonElement) &&
             !this.#isDisabled(tab)
@@ -375,7 +302,7 @@ export class TabsController {
   }
 
   #findEnabledTab(currentIndex: number, step: 1 | -1): HTMLElement | undefined {
-    const { tabs, loop } = this.#options;
+    const { tabs, loop } = this.#config;
 
     for (let i = 1; i <= tabs.length; i++) {
       let index = currentIndex + step * i;
@@ -407,7 +334,7 @@ export class TabsController {
     previousSelectedTab: HTMLElement,
     previousSelectedIndex: number,
   ): HTMLElement {
-    const { tabs } = this.#options;
+    const { tabs } = this.#config;
 
     //  If the tab reference still exists, keep it selected
     if (
@@ -440,12 +367,12 @@ export class TabsController {
 
     let selectedTab;
     if (typeof tab === "number") {
-      selectedTab = this.#options.tabs[tab];
+      selectedTab = this.#config.tabs[tab];
     } else {
       selectedTab = tab;
     }
 
-    if (!selectedTab || !this.#options.tabs.includes(selectedTab)) {
+    if (!selectedTab || !this.#config.tabs.includes(selectedTab)) {
       console.warn("Appret tabs: selected tab is not among tabs:", tab);
       return;
     }
@@ -459,34 +386,30 @@ export class TabsController {
   }
 
   update(
-    changes: Omit<Partial<TabsControllerOptions>, "initialSelectedTab">,
+    changes: Omit<Partial<TabsControllerConfig>, "initialSelection">,
   ): void {
     if (this.#destroyed) {
       console.warn("Appret tabs: update() called after destroy().");
       return;
     }
 
-    const mergedOptions = mergeOptions(this.#options, changes);
-    const next = {
-      ...mergedOptions,
-      tabs: [...mergedOptions.tabs],
-      panels: [...mergedOptions.panels],
-    };
+    const next = copyLists({ ...this.#config, ...changes });
 
-    this.#validateOptions(next);
+    this.#validateConfig(next);
 
     const previousTab = this.#selectedTab;
     const previousIndex = this.selectedIndex;
 
     this.#teardown();
 
-    this.#options = next;
+    this.#config = next;
     this.#selectedTab = this.#selectionAfterUpdate(previousTab, previousIndex);
     this.#setup();
   }
 
-  focusSelectedTab(): void {
-    this.#selectedTab.focus();
+  //  Moves focus to the selected tab
+  focus(options?: FocusOptions): void {
+    this.#selectedTab.focus(options);
   }
 
   get selectedTab(): HTMLElement {
@@ -494,7 +417,7 @@ export class TabsController {
   }
 
   get selectedIndex(): number {
-    return this.#options.tabs.indexOf(this.#selectedTab);
+    return this.#config.tabs.indexOf(this.#selectedTab);
   }
 
   destroy(): void {

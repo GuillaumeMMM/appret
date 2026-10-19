@@ -7,7 +7,7 @@ import {
   it,
   vi,
 } from "vitest";
-import { TabsController, type TabsControllerOptions } from "./controller.js";
+import { TabsController, type TabsControllerConfig } from "./controller.js";
 
 type Setup = {
   count?: number;
@@ -15,7 +15,7 @@ type Setup = {
   disabled?: number[];
   nativeDisabled?: number[];
   dir?: "ltr" | "rtl";
-  options?: Partial<TabsControllerOptions>;
+  config?: Partial<TabsControllerConfig>;
 };
 
 let controllers: TabsController[] = [];
@@ -26,7 +26,7 @@ function setup({
   disabled = [],
   nativeDisabled = [],
   dir,
-  options = {},
+  config = {},
 }: Setup = {}) {
   const host = document.createElement("div");
   const list = document.createElement("div");
@@ -55,8 +55,8 @@ function setup({
     tabs,
     panels,
     label: "Sections",
-    ...options,
-  } as TabsControllerOptions);
+    ...config,
+  } as TabsControllerConfig);
   controllers.push(controller);
 
   return { host, list, tabs, panels, controller };
@@ -115,7 +115,7 @@ describe("roles, states and properties", () => {
   });
 
   it("labels the tablist with aria-label when there is no visible label", () => {
-    const { list } = setup({ options: { label: "Account settings" } });
+    const { list } = setup({ config: { label: "Account settings" } });
     expect(list.getAttribute("aria-label")).toBe("Account settings");
   });
 
@@ -126,7 +126,7 @@ describe("roles, states and properties", () => {
     document.body.append(heading);
 
     const { list } = setup({
-      options: { label: undefined, labelledBy: "settings-heading" },
+      config: { label: { byId: "settings-heading" } },
     });
     expect(list.getAttribute("aria-labelledby")).toBe("settings-heading");
     expect(list.hasAttribute("aria-label")).toBe(false);
@@ -189,7 +189,7 @@ describe("roles, states and properties", () => {
   });
 
   it("sets aria-orientation to vertical for a vertical tablist", () => {
-    const { list } = setup({ options: { orientation: "vertical" } });
+    const { list } = setup({ config: { orientation: "vertical" } });
     expect(list.getAttribute("aria-orientation")).toBe("vertical");
   });
 
@@ -233,7 +233,7 @@ describe("roles, states and properties", () => {
   });
 });
 
-describe("keyboard: automatic activation", () => {
+describe("keyboard: selection follows focus", () => {
   it("Right Arrow moves focus to the next tab and selects it", () => {
     const { tabs, panels } = setup();
     tabs[0]!.focus();
@@ -295,7 +295,7 @@ describe("keyboard: automatic activation", () => {
 
   describe("vertical tablist", () => {
     it("Down Arrow performs as Right Arrow", () => {
-      const { tabs, panels } = setup({ options: { orientation: "vertical" } });
+      const { tabs, panels } = setup({ config: { orientation: "vertical" } });
       tabs[0]!.focus();
       press("ArrowDown");
       expect(document.activeElement).toBe(tabs[1]);
@@ -303,7 +303,7 @@ describe("keyboard: automatic activation", () => {
     });
 
     it("Up Arrow performs as Left Arrow", () => {
-      const { tabs, panels } = setup({ options: { orientation: "vertical" } });
+      const { tabs, panels } = setup({ config: { orientation: "vertical" } });
       tabs[0]!.focus();
       press("ArrowUp");
       expect(document.activeElement).toBe(tabs[2]);
@@ -312,9 +312,9 @@ describe("keyboard: automatic activation", () => {
   });
 });
 
-describe("keyboard: manual activation", () => {
+describe("keyboard: selection doesn't follow focus", () => {
   it("arrow keys move focus without changing the selection", () => {
-    const { tabs, panels } = setup({ options: { activation: "manual" } });
+    const { tabs, panels } = setup({ config: { selectionFollowsFocus: false } });
     tabs[0]!.focus();
     press("ArrowRight");
     expect(document.activeElement).toBe(tabs[1]);
@@ -322,7 +322,7 @@ describe("keyboard: manual activation", () => {
   });
 
   it("Home and End move focus without changing the selection", () => {
-    const { tabs, panels } = setup({ options: { activation: "manual" } });
+    const { tabs, panels } = setup({ config: { selectionFollowsFocus: false } });
     tabs[0]!.focus();
     press("End");
     expect(document.activeElement).toBe(tabs[2]);
@@ -332,7 +332,7 @@ describe("keyboard: manual activation", () => {
   });
 
   it("keeps tabindex=0 on the selected tab while focus moves", () => {
-    const { tabs } = setup({ options: { activation: "manual" } });
+    const { tabs } = setup({ config: { selectionFollowsFocus: false } });
     tabs[0]!.focus();
     press("ArrowRight");
     expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual([
@@ -345,7 +345,7 @@ describe("keyboard: manual activation", () => {
   it.each(["Enter", " "])("%j activates the focused tab", (key) => {
     const { tabs, panels } = setup({
       tabTag: "div",
-      options: { activation: "manual" },
+      config: { selectionFollowsFocus: false },
     });
     tabs[0]!.focus();
     press("ArrowRight");
@@ -356,7 +356,7 @@ describe("keyboard: manual activation", () => {
 
   it("button tabs activate through their native click", () => {
     // In a browser, Enter/Space on a <button> fire click; jsdom doesn't, so click directly.
-    const { tabs, panels } = setup({ options: { activation: "manual" } });
+    const { tabs, panels } = setup({ config: { selectionFollowsFocus: false } });
     tabs[0]!.focus();
     press("ArrowRight");
     tabs[1]!.click();
@@ -426,10 +426,10 @@ describe("disabled tabs", () => {
     expectSelected(tabs, panels, 0);
   });
 
-  it("ignores Enter on a disabled tab in manual mode", () => {
+  it("ignores Enter on a disabled tab when selection doesn't follow focus", () => {
     const { tabs, panels } = setup({
       tabTag: "div",
-      options: { activation: "manual" },
+      config: { selectionFollowsFocus: false },
     });
     tabs[1]!.setAttribute("aria-disabled", "true");
     tabs[1]!.focus();
@@ -486,7 +486,7 @@ describe("right-to-left", () => {
   it("does not swap Up and Down in a vertical tablist", () => {
     const { tabs } = setup({
       dir: "rtl",
-      options: { orientation: "vertical" },
+      config: { orientation: "vertical" },
     });
     tabs[0]!.focus();
     press("ArrowDown");
@@ -498,7 +498,7 @@ describe("right-to-left", () => {
   it("swaps Left and Right in a vertical tablist too", () => {
     const { tabs } = setup({
       dir: "rtl",
-      options: { orientation: "vertical" },
+      config: { orientation: "vertical" },
     });
     tabs[0]!.focus();
     press("ArrowLeft");
@@ -523,7 +523,7 @@ describe("right-to-left", () => {
   });
 });
 
-describe("initialSelectedTab", () => {
+describe("initialSelection", () => {
   let warn: ReturnType<typeof vi.spyOn>;
 
   beforeAll(() => {
@@ -545,14 +545,14 @@ describe("initialSelectedTab", () => {
         tabs,
         panels,
         label: "Sections",
-        initialSelectedTab: tabs[2],
+        initialSelection: tabs[2],
       }),
     );
     expectSelected(tabs, panels, 2);
   });
 
   it("selects a tab passed as an index", () => {
-    const { tabs, panels } = setup({ options: { initialSelectedTab: 2 } });
+    const { tabs, panels } = setup({ config: { initialSelection: 2 } });
     expectSelected(tabs, panels, 2);
     expect(warn).not.toHaveBeenCalled();
   });
@@ -560,7 +560,7 @@ describe("initialSelectedTab", () => {
   it("treats index 0 as a valid selection", () => {
     const { tabs, panels } = setup({
       disabled: [1],
-      options: { initialSelectedTab: 0 },
+      config: { initialSelection: 0 },
     });
     expectSelected(tabs, panels, 0);
     expect(warn).not.toHaveBeenCalled();
@@ -571,7 +571,7 @@ describe("initialSelectedTab", () => {
     (index) => {
       const { tabs, panels } = setup({
         disabled: [0],
-        options: { initialSelectedTab: index },
+        config: { initialSelection: index },
       });
       expectSelected(tabs, panels, 1);
       expect(warn).toHaveBeenCalledWith(
@@ -583,7 +583,7 @@ describe("initialSelectedTab", () => {
   it("falls back to the first enabled tab when the index points to a disabled tab", () => {
     const { tabs, panels } = setup({
       disabled: [2],
-      options: { initialSelectedTab: 2 },
+      config: { initialSelection: 2 },
     });
     expectSelected(tabs, panels, 0);
   });
@@ -591,7 +591,7 @@ describe("initialSelectedTab", () => {
   it("doesn't fire appret-tabs-change for the initial selection", () => {
     const listener = vi.fn();
     document.addEventListener("appret-tabs-change", listener);
-    setup({ options: { initialSelectedTab: 1 } });
+    setup({ config: { initialSelection: 1 } });
     document.removeEventListener("appret-tabs-change", listener);
     expect(listener).not.toHaveBeenCalled();
   });
@@ -599,7 +599,7 @@ describe("initialSelectedTab", () => {
 
 describe("loop: false", () => {
   it("Right Arrow on the last tab stays on it", () => {
-    const { tabs, panels } = setup({ options: { loop: false } });
+    const { tabs, panels } = setup({ config: { loop: false } });
     tabs[2]!.click();
     tabs[2]!.focus();
     const event = press("ArrowRight");
@@ -609,7 +609,7 @@ describe("loop: false", () => {
   });
 
   it("Left Arrow on the first tab stays on it", () => {
-    const { tabs, panels } = setup({ options: { loop: false } });
+    const { tabs, panels } = setup({ config: { loop: false } });
     tabs[0]!.focus();
     press("ArrowLeft");
     expect(document.activeElement).toBe(tabs[0]);
@@ -617,7 +617,7 @@ describe("loop: false", () => {
   });
 
   it("still moves between tabs that aren't at an edge", () => {
-    const { tabs, panels } = setup({ options: { loop: false } });
+    const { tabs, panels } = setup({ config: { loop: false } });
     tabs[0]!.focus();
     press("ArrowRight");
     press("ArrowRight");
@@ -628,7 +628,7 @@ describe("loop: false", () => {
   });
 
   it("doesn't wrap when the remaining tabs before the edge are disabled", () => {
-    const { tabs, panels } = setup({ disabled: [2], options: { loop: false } });
+    const { tabs, panels } = setup({ disabled: [2], config: { loop: false } });
     tabs[1]!.click();
     tabs[1]!.focus();
     press("ArrowRight");
@@ -637,7 +637,7 @@ describe("loop: false", () => {
   });
 
   it("doesn't wrap backwards past disabled tabs at the start", () => {
-    const { tabs, panels } = setup({ disabled: [0], options: { loop: false } });
+    const { tabs, panels } = setup({ disabled: [0], config: { loop: false } });
     tabs[1]!.focus();
     press("ArrowLeft");
     expect(document.activeElement).toBe(tabs[1]);
@@ -646,7 +646,7 @@ describe("loop: false", () => {
 
   it("stops at the edges of a vertical tablist", () => {
     const { tabs } = setup({
-      options: { loop: false, orientation: "vertical" },
+      config: { loop: false, orientation: "vertical" },
     });
     tabs[0]!.focus();
     press("ArrowUp");
@@ -657,7 +657,7 @@ describe("loop: false", () => {
   });
 
   it("stops at the edges in right-to-left", () => {
-    const { tabs } = setup({ dir: "rtl", options: { loop: false } });
+    const { tabs } = setup({ dir: "rtl", config: { loop: false } });
     tabs[2]!.focus();
     press("ArrowLeft");
     expect(document.activeElement).toBe(tabs[2]);
@@ -667,7 +667,7 @@ describe("loop: false", () => {
   });
 
   it("doesn't change Home and End", () => {
-    const { tabs } = setup({ options: { loop: false } });
+    const { tabs } = setup({ config: { loop: false } });
     tabs[1]!.focus();
     press("End");
     expect(document.activeElement).toBe(tabs[2]);
@@ -675,9 +675,9 @@ describe("loop: false", () => {
     expect(document.activeElement).toBe(tabs[0]);
   });
 
-  it("stops focus at the edges in manual mode", () => {
+  it("stops focus at the edges when selection doesn't follow focus", () => {
     const { tabs, panels } = setup({
-      options: { loop: false, activation: "manual" },
+      config: { loop: false, selectionFollowsFocus: false },
     });
     tabs[2]!.focus();
     press("ArrowRight");
@@ -816,6 +816,14 @@ describe("select() API", () => {
   });
 });
 
+describe("focus()", () => {
+  it("moves focus to the selected tab", () => {
+    const { tabs, controller } = setup({ config: { initialSelection: 2 } });
+    controller.focus();
+    expect(document.activeElement).toBe(tabs[2]);
+  });
+});
+
 describe("update()", () => {
   let warn: ReturnType<typeof vi.spyOn>;
 
@@ -926,7 +934,7 @@ describe("update()", () => {
       const { tabs, panels, controller } = setup({
         count: 4,
         disabled: [2],
-        options: { loop: false },
+        config: { loop: false },
       });
       controller.select(3);
       controller.update({ tabs: tabs.slice(0, 3), panels: panels.slice(0, 3) });
@@ -1041,7 +1049,7 @@ describe("update()", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  describe("options", () => {
+  describe("config", () => {
     it("can switch to a vertical tablist", () => {
       const { list, tabs, panels, controller } = setup();
       controller.update({ orientation: "vertical" });
@@ -1052,49 +1060,49 @@ describe("update()", () => {
       expectSelected(tabs, panels, 1);
     });
 
-    it("can switch to manual activation", () => {
+    it("can stop selection from following focus", () => {
       const { tabs, panels, controller } = setup();
-      controller.update({ activation: "manual" });
+      controller.update({ selectionFollowsFocus: false });
       tabs[0]!.focus();
       press("ArrowRight");
       expect(document.activeElement).toBe(tabs[1]);
       expectSelected(tabs, panels, 0);
     });
 
-    it("keeps options that aren't passed", () => {
+    it("keeps settings that aren't passed", () => {
       const { list, tabs, panels, controller } = setup({
-        options: { orientation: "vertical", label: "Sections" },
+        config: { orientation: "vertical", label: "Sections" },
       });
       controller.update({ tabs, panels });
       expect(list.getAttribute("aria-orientation")).toBe("vertical");
       expect(list.getAttribute("aria-label")).toBe("Sections");
     });
 
-    it("resets an option passed as undefined", () => {
+    it("resets a setting passed as undefined", () => {
       const { list, controller } = setup({
-        options: { orientation: "vertical" },
+        config: { orientation: "vertical" },
       });
       controller.update({ orientation: undefined });
       expect(list.hasAttribute("aria-orientation")).toBe(false);
     });
 
-    it("replaces label with labelledBy", () => {
+    it("replaces a text label with label IDs", () => {
       const heading = document.createElement("h2");
       heading.id = "settings-heading";
       document.body.append(heading);
-      const { list, controller } = setup({ options: { label: "Sections" } });
+      const { list, controller } = setup({ config: { label: "Sections" } });
 
-      controller.update({ labelledBy: "settings-heading" });
+      controller.update({ label: { byId: "settings-heading" } });
       expect(list.hasAttribute("aria-label")).toBe(false);
       expect(list.getAttribute("aria-labelledby")).toBe("settings-heading");
     });
 
-    it("replaces labelledBy with label", () => {
+    it("replaces label IDs with a text label", () => {
       const heading = document.createElement("h2");
       heading.id = "settings-heading";
       document.body.append(heading);
       const { list, controller } = setup({
-        options: { label: undefined, labelledBy: "settings-heading" },
+        config: { label: { byId: "settings-heading" } },
       });
 
       controller.update({ label: "Sections" });
@@ -1150,7 +1158,7 @@ describe("errors and warnings", () => {
     warn.mockRestore();
   });
 
-  function make(options: Partial<TabsControllerOptions>, markup?: string) {
+  function make(config: Partial<TabsControllerConfig>, markup?: string) {
     const host = document.createElement("div");
     host.innerHTML =
       markup ??
@@ -1161,8 +1169,8 @@ describe("errors and warnings", () => {
       list: host.querySelector<HTMLElement>(".list")!,
       tabs: [...host.querySelectorAll<HTMLElement>(".list > button")],
       panels: [...host.querySelectorAll<HTMLElement>("section")],
-      ...options,
-    } as TabsControllerOptions);
+      ...config,
+    } as TabsControllerConfig);
     controllers.push(controller);
     return { host, controller };
   }
@@ -1220,10 +1228,10 @@ describe("errors and warnings", () => {
     );
   });
 
-  it("warns when initialSelectedTab isn't one of the tabs", () => {
+  it("warns when initialSelection isn't one of the tabs", () => {
     make({
       label: "Sections",
-      initialSelectedTab: document.createElement("button"),
+      initialSelection: document.createElement("button"),
     });
     expect(warn).toHaveBeenCalledWith(
       "Appret tabs: the initial selected tab is not among tabs.",
@@ -1231,9 +1239,10 @@ describe("errors and warnings", () => {
   });
 
   it("warns when the tablist has no accessible label", () => {
-    make({});
+    const { host } = make({});
     expect(warn).toHaveBeenCalledWith(
       "Appret tabs: the tablist is missing an accessible label.",
+      host.querySelector(".list"),
     );
   });
 
@@ -1246,11 +1255,11 @@ describe("errors and warnings", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it("warns about labelledBy ids that don't exist in the tablist's root", () => {
+  it("warns about label IDs that don't exist in the tablist's root", () => {
     const heading = document.createElement("h2");
     heading.id = "real-heading";
     document.body.append(heading);
-    make({ labelledBy: " real-heading missing-heading " });
+    make({ label: { byId: " real-heading missing-heading " } });
     expect(warn).toHaveBeenCalledWith(
       "Appret tabs: ID missing in the tablist's document or shadow root:",
       ["missing-heading"],
@@ -1315,7 +1324,7 @@ function installAriaElementReflection() {
   };
 }
 
-describe("labelledByElements", () => {
+describe("label elements", () => {
   let uninstall: () => void;
   let warn: ReturnType<typeof vi.spyOn>;
 
@@ -1336,7 +1345,7 @@ describe("labelledByElements", () => {
     const subtitle = document.createElement("p");
     document.body.append(title, subtitle);
     const { list } = setup({
-      options: { label: undefined, labelledByElements: [title, subtitle] },
+      config: { label: { byElements: [title, subtitle] } },
     });
     expect(list.ariaLabelledByElements).toEqual([title, subtitle]);
     expect(warn).not.toHaveBeenCalled();
@@ -1355,7 +1364,7 @@ describe("labelledByElements", () => {
         list,
         tabs: [root.querySelector("button")!],
         panels: [root.querySelector("section")!],
-        labelledByElements: [heading],
+        label: { byElements: [heading] },
       }),
     );
     expect(list.ariaLabelledByElements).toEqual([heading]);
@@ -1371,10 +1380,10 @@ describe("labelledByElements", () => {
     document.body.append(visible);
 
     setup({
-      options: { label: undefined, labelledByElements: [visible, hidden] },
+      config: { label: { byElements: [visible, hidden] } },
     });
     expect(warn).toHaveBeenCalledWith(
-      "Appret tabs: these labelledByElements can't label the tablist because they're inside another shadow root:",
+      "Appret tabs: these label elements can't label the tablist because they're inside another shadow root:",
       [hidden],
     );
   });

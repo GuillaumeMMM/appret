@@ -1,6 +1,6 @@
 export { ListboxController } from "./controller.js";
 export type {
-  ListboxControllerOptions,
+  ListboxControllerConfig,
   ListboxGroup,
   ListboxChangeDetail,
   ListboxChangeEvent,

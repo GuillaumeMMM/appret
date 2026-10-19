@@ -1,8 +1,8 @@
 import { HTMLElementBase } from "../shared/element.js";
-import { TabsController, type TabsControllerOptions } from "./controller.js";
+import { TabsController, type TabsControllerConfig } from "./controller.js";
 
-type TabsParts = Pick<TabsControllerOptions, "tabs" | "panels"> & {
-  list?: TabsControllerOptions["list"];
+type TabsParts = Pick<TabsControllerConfig, "tabs" | "panels"> & {
+  list?: TabsControllerConfig["list"];
 };
 
 export class TabsElement extends HTMLElementBase {
@@ -10,7 +10,7 @@ export class TabsElement extends HTMLElementBase {
     "label",
     "labelledby",
     "orientation",
-    "activation",
+    "selection-follows-focus",
     "loop",
   ];
   #controller?: TabsController;
@@ -102,14 +102,14 @@ export class TabsElement extends HTMLElementBase {
     const focusLost = this.#focusWasLost();
 
     try {
-      this.#controller.update({ ...parts, ...this.#getAttributeOptions() });
+      this.#controller.update({ ...parts, ...this.#getAttributeConfig() });
     } catch (error) {
       // e.g. a tab removed but not yet its panel: keep the current tabs working.
       console.warn("Appret tabs: ignored an invalid change.", error);
       return;
     }
     this.#parts = parts;
-    if (focusLost) this.#controller.focusSelectedTab();
+    if (focusLost) this.#controller.focus();
   }
 
   #focusWasLost(): boolean {
@@ -137,9 +137,9 @@ export class TabsElement extends HTMLElementBase {
     try {
       this.#controller = new TabsController(this, {
         ...parts,
-        ...this.#getAttributeOptions(),
-        initialSelectedTab: this.#pendingSelection,
-      } as TabsControllerOptions);
+        ...this.#getAttributeConfig(),
+        initialSelection: this.#pendingSelection,
+      } as TabsControllerConfig);
 
       this.#parts = parts as TabsParts;
       this.#pendingSelection = undefined;
@@ -162,21 +162,25 @@ export class TabsElement extends HTMLElementBase {
     };
   }
 
-  #getAttributeOptions() {
-    return {
-      label: this.getAttribute("label") ?? undefined,
-      labelledBy: this.getAttribute("labelledby") ?? undefined,
+  #getAttributeConfig() {
+    const labelledBy = this.getAttribute("labelledby");
 
-      //  Make sure that `orientation` and `activation` have a valid value
+    return {
+      //  label wins over labelledby when both are set
+      label:
+        this.getAttribute("label") ??
+        (labelledBy === null ? undefined : { byId: labelledBy }),
+
+      //  Make sure that `orientation` has a valid value
       orientation: enumAttribute(this, "orientation", [
         "horizontal",
         "vertical",
       ] as const),
-      activation: enumAttribute(this, "activation", [
-        "automatic",
-        "manual",
-      ] as const),
 
+      selectionFollowsFocus:
+        this.getAttribute("selection-follows-focus") === null
+          ? undefined
+          : this.getAttribute("selection-follows-focus") !== "false",
       loop:
         this.getAttribute("loop") === null
           ? undefined
@@ -218,8 +222,9 @@ export class TabsElement extends HTMLElementBase {
     this.select(index);
   }
 
-  focusSelectedTab(): void {
-    this.#controller?.focusSelectedTab();
+  //  Moves focus to the selected tab
+  override focus(options?: FocusOptions): void {
+    this.#controller?.focus(options);
   }
 }
 

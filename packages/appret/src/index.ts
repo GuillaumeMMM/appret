@@ -1,6 +1,6 @@
 export { TabsController } from "./tabs/controller.js";
 export type {
-  TabsControllerOptions,
+  TabsControllerConfig,
   TabsChangeDetail,
   TabsChangeEvent,
 } from "./tabs/controller.js";
