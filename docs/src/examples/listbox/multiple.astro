@@ -1,0 +1,26 @@
+<div id="listbox-multiple">
+  <span id="listbox-multiple-label">Languages</span>
+  <ul class="list">
+    <li>English</li>
+    <li>French</li>
+    <li>German</li>
+    <li aria-disabled="true">Italian</li>
+    <li>Japanese</li>
+    <li>Spanish</li>
+  </ul>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-multiple")!;
+  const options = [...host.querySelectorAll<HTMLElement>(".list > li")];
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options,
+    labelledBy: "listbox-multiple-label",
+    multiple: true,
+    initialSelectedOptions: [options[0]!, options[1]!],
+  });
+</script>

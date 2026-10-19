@@ -1,0 +1,37 @@
+<div id="listbox-groups">
+  <span id="listbox-groups-label">Meal</span>
+  <div class="list">
+    <ul class="group">
+      <li class="label">Starters</li>
+      <li>Soup</li>
+      <li>Salad</li>
+    </ul>
+    <ul class="group">
+      <li class="label">Mains</li>
+      <li>Pasta</li>
+      <li>Risotto</li>
+      <li>Curry</li>
+    </ul>
+    <ul class="group">
+      <li class="label">Desserts</li>
+      <li>Cake</li>
+      <li>Sorbet</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-groups")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    labelledBy: "listbox-groups-label",
+    groups: [...host.querySelectorAll<HTMLElement>(".group")].map((group) => ({
+      group,
+      options: [...group.querySelectorAll<HTMLElement>("li:not(.label)")],
+      labelledByElements: [group.querySelector(".label")!],
+    })),
+  });
+</script>

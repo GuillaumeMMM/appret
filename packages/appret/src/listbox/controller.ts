@@ -57,10 +57,12 @@ export class ListboxController {
   #typeaheadTimeout: ReturnType<typeof setTimeout> | undefined;
 
   #selectedOption: HTMLElement | null = null;
-  #activeOption!: HTMLElement;
+  #activeOption: HTMLElement | null = null;
 
   //  When multiple
   #selectedOptions: HTMLElement[] = [];
+  //  Anchor to toggle options when user types Shift + " "
+  #lastSelectedOption: HTMLElement | null = null;
 
   #destroyed = false;
 
@@ -69,9 +71,10 @@ export class ListboxController {
     this.#validateOptions(options);
 
     this.#options = options;
+    const flatOptions = this.#getFlatOptions();
 
     if (!options.multiple && options.initialSelectedOption !== undefined) {
-      if (!this.#getFlatOptions().includes(options.initialSelectedOption)) {
+      if (!flatOptions.includes(options.initialSelectedOption)) {
         console.warn(
           "Appret listbox: the initial selected option is not among the options.",
         );
@@ -85,12 +88,37 @@ export class ListboxController {
       }
     }
 
+    if (options.multiple && options.initialSelectedOptions?.length) {
+      const initialSelectedOptionsNotInListbox =
+        options.initialSelectedOptions.filter((o) => !flatOptions.includes(o));
+      if (initialSelectedOptionsNotInListbox.length > 0) {
+        console.warn(
+          "Appret listbox: some of the initial selected options are not among the options:",
+          initialSelectedOptionsNotInListbox,
+        );
+      }
+
+      const disabledInitialSelectedOptions =
+        options.initialSelectedOptions.filter((o) => this.#isDisabled(o));
+      if (disabledInitialSelectedOptions?.length) {
+        console.warn(
+          "Appret listbox: some of the initial selected options are disabled.",
+          disabledInitialSelectedOptions,
+        );
+      }
+
+      this.#selectedOptions = options.initialSelectedOptions.filter(
+        (o) =>
+          !initialSelectedOptionsNotInListbox.includes(o) &&
+          !disabledInitialSelectedOptions.includes(o),
+      );
+    }
+
     this.#setup();
   }
 
   #setup() {
     this.#abort = new AbortController();
-    console.log(this.#options);
 
     this.#setAriaRoles();
     this.#setLabels(this.#options.list, this.#options);
@@ -101,18 +129,32 @@ export class ListboxController {
     this.#setMultiselectable();
     this.#setListeners();
 
-    if (this.#selectedOption) {
-      this.#attributeRecorder.set(
-        this.#selectedOption,
-        "aria-selected",
-        "true",
+    if (this.#options.multiple) {
+      this.#setSelectedOptions(this.#selectedOptions, { notify: false });
+
+      const firstSelected = this.#getFlatOptions().find((o) =>
+        this.#selectedOptions.includes(o),
+      );
+      this.#setActiveOption(
+        firstSelected ??
+          this.#findNonDisabledOption(-1, 1) ??
+          this.#getFlatOptions()[0]!,
+      );
+    } else {
+      //  When setting up on init or after update set the selected and active option
+      if (this.#selectedOption) {
+        this.#attributeRecorder.set(
+          this.#selectedOption,
+          "aria-selected",
+          "true",
+        );
+      }
+      this.#setActiveOption(
+        this.#selectedOption ??
+          this.#findNonDisabledOption(-1, 1) ??
+          this.#getFlatOptions()[0]!,
       );
     }
-    this.#setActiveOption(
-      this.#selectedOption ??
-        this.#findNonDisabledOption(-1, 1) ??
-        this.#getFlatOptions()[0]!,
-    );
   }
 
   #validateOptions(newOptions: ListboxControllerOptions) {
@@ -293,14 +335,14 @@ export class ListboxController {
     } = this.#options;
     const flatOptions = this.#getFlatOptions();
 
-    if (multiple) {
-      return;
-    }
-
     list.addEventListener(
       "focusin",
       (e) => {
-        if (!selectOptionOnListFocus || this.#selectedOption) {
+        if (
+          !selectOptionOnListFocus ||
+          this.#selectedOption ||
+          this.#selectedOptions.length
+        ) {
           return;
         }
 
@@ -328,7 +370,11 @@ export class ListboxController {
           }
 
           this.#setActiveOption(option);
-          this.#setSelectedOption(option);
+          if (multiple) {
+            this.#toggleSelectedOption(option);
+          } else {
+            this.#setSelectedOption(option);
+          }
           option.focus();
         },
         { signal: this.#abort.signal },
@@ -341,7 +387,26 @@ export class ListboxController {
             return;
           }
 
-          if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) {
+          const nonDisabled = flatOptions.filter((o) => !this.#isDisabled(o));
+
+          if (
+            multiple &&
+            (e.ctrlKey || e.metaKey) &&
+            e.key.toLowerCase() === "a"
+          ) {
+            e.preventDefault();
+            const selectedOptions = nonDisabled.every((o) =>
+              this.#selectedOptions.includes(o),
+            );
+            this.#setSelectedOptions(selectedOptions ? [] : nonDisabled);
+            return;
+          }
+
+          if (
+            e.altKey ||
+            e.isComposing ||
+            (!multiple && (e.ctrlKey || e.metaKey))
+          ) {
             return;
           }
 
@@ -387,20 +452,45 @@ export class ListboxController {
               break;
             }
             case " ": {
+              e.preventDefault();
+
               if (this.#typeahead) {
                 target = this.#findOptionByText(" ", i);
                 break;
               }
 
+              if (multiple) {
+                if (e.shiftKey && this.#lastSelectedOption) {
+                  //  Select all options from the last seelcted one to the active one
+                  const from = flatOptions.indexOf(this.#lastSelectedOption);
+                  const to = i;
+                  this.#selectOptionsRange(from, to);
+                } else {
+                  this.#toggleSelectedOption(option);
+                }
+
+                break;
+              }
+
               if (!selectionFollowsFocus) {
-                e.preventDefault();
                 this.#setSelectedOption(option);
               }
               break;
             }
             default: {
-              target = this.#findOptionByText(e.key, i);
+              if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                target = this.#findOptionByText(e.key, i);
+              }
             }
+          }
+
+          if (
+            target &&
+            multiple &&
+            e.shiftKey &&
+            ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+          ) {
+            this.#toggleSelectedOption(target);
           }
 
           if (target) {
@@ -411,6 +501,32 @@ export class ListboxController {
             if (selectionFollowsFocus) {
               this.#setSelectedOption(target);
             }
+          }
+
+          if (
+            e.key === "Home" &&
+            target &&
+            multiple &&
+            e.shiftKey &&
+            e.ctrlKey
+          ) {
+            //  Select all options from beginning to active option
+            const from = 0;
+            const to = i;
+            this.#selectOptionsRange(from, to);
+          }
+
+          if (
+            e.key === "End" &&
+            target &&
+            multiple &&
+            e.shiftKey &&
+            e.ctrlKey
+          ) {
+            //  Select all options from active option to end
+            const from = i;
+            const to = flatOptions.length;
+            this.#selectOptionsRange(from, to);
           }
         },
         { signal: this.#abort.signal },
@@ -423,14 +539,10 @@ export class ListboxController {
       return;
     }
 
-    let selectedIndex = 0;
-
     const flatOptions = this.#getFlatOptions();
 
-    for (const [i, option] of flatOptions.entries()) {
+    for (const option of flatOptions) {
       if (option === optionToSelect) {
-        selectedIndex = i;
-
         this.#attributeRecorder.set(option, "aria-selected", "true");
       } else {
         if (option.getAttribute("aria-selected") === "true") {
@@ -446,6 +558,51 @@ export class ListboxController {
     }
 
     this.#selectedOption = optionToSelect;
+  }
+
+  #setSelectedOptions(optionsToSelect: HTMLElement[], { notify = true } = {}) {
+    const selected = this.#getFlatOptions().filter(
+      (o) => optionsToSelect.includes(o) && !this.#isDisabled(o),
+    );
+
+    const flatOptions = this.#getFlatOptions();
+
+    for (const option of flatOptions) {
+      if (selected.includes(option)) {
+        this.#attributeRecorder.set(option, "aria-selected", "true");
+      } else {
+        this.#attributeRecorder.set(option, "aria-selected", "false");
+      }
+    }
+
+    if (notify && !areSameElementsLists(selected, this.#selectedOptions)) {
+      triggerCustomEvent(this.host, "appret-listbox-change", {
+        options: selected,
+      });
+    }
+
+    this.#selectedOptions = selected;
+  }
+
+  #toggleSelectedOption(o: HTMLElement) {
+    const isAlreadySelected = this.#selectedOptions.find((s) => s === o);
+    if (!isAlreadySelected) {
+      this.#lastSelectedOption = o;
+    }
+
+    return this.#setSelectedOptions(
+      this.#selectedOptions.includes(o)
+        ? this.#selectedOptions.filter((s) => s !== o)
+        : [...this.#selectedOptions, o],
+    );
+  }
+
+  #selectOptionsRange(from: number, to: number) {
+    const [start, end] = from < to ? [from, to] : [to, from];
+    this.#setSelectedOptions([
+      ...this.#selectedOptions,
+      ...this.#getFlatOptions().slice(start, end + 1),
+    ]);
   }
 
   #setActiveOption(optionToActivate: HTMLElement) {
@@ -498,7 +655,6 @@ export class ListboxController {
     key: string,
     startFromIndex: number,
   ): HTMLElement | undefined {
-    console.log(key);
     clearTimeout(this.#typeaheadTimeout);
     this.#typeaheadTimeout = setTimeout(() => (this.#typeahead = ""), 500);
 
@@ -514,10 +670,9 @@ export class ListboxController {
 
     for (let i = 0; i < flatOptions.length; i++) {
       const option = flatOptions[(start + i) % flatOptions.length]!;
-      const text = (option.textContent ?? "").toLowerCase();
+      const text = (option.textContent ?? "").trim().toLowerCase();
 
       if (!this.#isDisabled(option) && text.startsWith(search)) {
-        console.log(option);
         return option;
       }
     }
@@ -528,10 +683,19 @@ export class ListboxController {
   #teardown(): void {
     this.#abort.abort();
     this.#attributeRecorder.restore();
+    clearTimeout(this.#typeaheadTimeout);
+    this.#typeahead = "";
+    this.#lastSelectedOption = null;
   }
 
   destroy(): void {
     this.#teardown();
     this.#destroyed = true;
   }
+}
+
+function areSameElementsLists(listA: HTMLElement[], listB: HTMLElement[]) {
+  return (
+    listA.length === listB.length && listA.every((el) => listB.includes(el))
+  );
 }

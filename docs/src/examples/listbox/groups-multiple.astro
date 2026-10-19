@@ -1,0 +1,40 @@
+<div id="listbox-groups-multiple">
+  <span id="listbox-groups-multiple-label">Toppings</span>
+  <div class="list">
+    <ul class="group">
+      <li class="label">Cheese</li>
+      <li>Mozzarella</li>
+      <li>Parmesan</li>
+      <li>Goat cheese</li>
+    </ul>
+    <ul class="group">
+      <li class="label">Vegetables</li>
+      <li>Mushrooms</li>
+      <li>Olives</li>
+      <li>Onions</li>
+      <li>Peppers</li>
+    </ul>
+    <ul class="group" aria-disabled="true">
+      <li class="label">Meat</li>
+      <li>Ham</li>
+      <li>Pepperoni</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-groups-multiple")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    labelledBy: "listbox-groups-multiple-label",
+    multiple: true,
+    groups: [...host.querySelectorAll<HTMLElement>(".group")].map((group) => ({
+      group,
+      options: [...group.querySelectorAll<HTMLElement>("li:not(.label)")],
+      labelledByElements: [group.querySelector(".label")!],
+    })),
+  });
+</script>

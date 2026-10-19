@@ -15,6 +15,15 @@
   color: red;
 }
 
-.sl-markdown-content [role="option"][aria-disabled="true"] {
+.sl-markdown-content :is([role="option"], [role="group"])[aria-disabled="true"] {
   opacity: 0.5;
+}
+
+.sl-markdown-content [role="group"] {
+  list-style: none;
+  padding: 0;
+}
+
+.sl-markdown-content [role="group"] > [role="presentation"] {
+  font-weight: 600;
 }

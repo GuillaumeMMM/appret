@@ -8,6 +8,12 @@ import { Code } from "@astrojs/starlight/components";
 
 import Basic from "../../../examples/listbox/basic.astro";
 import basicSource from "../../../examples/listbox/basic.astro?raw";
+import Multiple from "../../../examples/listbox/multiple.astro";
+import multipleSource from "../../../examples/listbox/multiple.astro?raw";
+import Groups from "../../../examples/listbox/groups.astro";
+import groupsSource from "../../../examples/listbox/groups.astro?raw";
+import GroupsMultiple from "../../../examples/listbox/groups-multiple.astro";
+import groupsMultipleSource from "../../../examples/listbox/groups-multiple.astro?raw";
 
 `ListboxController` turns your own markup into a listbox following the
 [WAI-ARIA listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
@@ -15,3 +21,21 @@ import basicSource from "../../../examples/listbox/basic.astro?raw";
 <Basic />
 
 <Code code={basicSource} lang="astro" />
+
+## Multiple selection
+
+<Multiple />
+
+<Code code={multipleSource} lang="astro" />
+
+## Groups
+
+<Groups />
+
+<Code code={groupsSource} lang="astro" />
+
+## Groups with multiple selection
+
+<GroupsMultiple />
+
+<Code code={groupsMultipleSource} lang="astro" />
