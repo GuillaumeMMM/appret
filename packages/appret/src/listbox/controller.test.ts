@@ -1363,6 +1363,421 @@ describe("labelledByElements", () => {
   });
 });
 
+describe("selectOption()", () => {
+  it("selects an option", () => {
+    const { items, controller } = setup();
+    controller.selectOption(items[2]!);
+    expect(selected(items)).toEqual([2]);
+    expect(controller.selectedOption).toBe(items[2]);
+    expect(controller.selectedOptions).toEqual([items[2]]);
+  });
+
+  it("clears the selection with null", () => {
+    const { items, controller } = setup({ selectedIndex: 2 });
+    controller.selectOption(null);
+    expect(selected(items)).toEqual([]);
+    expect(items[2]!.hasAttribute("aria-selected")).toBe(false);
+    expect(controller.selectedOption).toBeNull();
+    expect(controller.selectedOptions).toEqual([]);
+  });
+
+  it("doesn't fire appret-listbox-change", () => {
+    const { host, items, controller } = setup();
+    const details = changes(host);
+    controller.selectOption(items[2]!);
+    expect(details).toEqual([]);
+  });
+
+  it("moves the tab stop to the selected option", () => {
+    const { items, controller } = setup();
+    controller.selectOption(items[3]!);
+    expect(tabStops(items)).toEqual([3]);
+  });
+
+  it("leaves the tab stop with the user when focus is in the listbox", () => {
+    const { items, controller } = setup();
+    items[0]!.focus();
+    press("ArrowDown");
+    controller.selectOption(items[3]!);
+    expect(tabStops(items)).toEqual([1]);
+    expect(focused(items)).toBe(1);
+  });
+
+  it("keeps the tab stop when the selection is cleared", () => {
+    const { items, controller } = setup({ selectedIndex: 2 });
+    controller.selectOption(null);
+    expect(tabStops(items)).toEqual([2]);
+  });
+
+  it("doesn't move focus", () => {
+    const { items, controller } = setup();
+    items[0]!.focus();
+    controller.selectOption(items[3]!);
+    expect(focused(items)).toBe(0);
+  });
+
+  it("warns and ignores an element that isn't one of the options", () => {
+    const { items, controller } = setup({ selectedIndex: 1 });
+    controller.selectOption(document.createElement("li"));
+    expect(selected(items)).toEqual([1]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("not among options"),
+      expect.any(HTMLElement),
+    );
+  });
+
+  it("warns and ignores a disabled option", () => {
+    const { items, controller } = setup({ disabled: [2], selectedIndex: 1 });
+    controller.selectOption(items[2]!);
+    expect(selected(items)).toEqual([1]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("disabled"),
+      items[2],
+    );
+  });
+
+  it("replaces the selection with that option in multiple selection", () => {
+    const { items, controller } = setup({ selectedIndexes: [0, 1] });
+    controller.selectOption(items[3]!);
+    expect(selected(items)).toEqual([3]);
+    controller.selectOption(null);
+    expect(selected(items)).toEqual([]);
+  });
+
+  it("warns and does nothing after destroy()", () => {
+    const { items, controller } = setup();
+    controller.destroy();
+    controller.selectOption(items[1]!);
+    expect(items[1]!.hasAttribute("aria-selected")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("after destroy()"),
+    );
+  });
+});
+
+describe("selectOptions()", () => {
+  it("replaces the selection", () => {
+    const { items, controller } = setup({ selectedIndexes: [0] });
+    controller.selectOptions([items[4]!, items[2]!]);
+    expect(selected(items)).toEqual([2, 4]);
+    expect(controller.selectedOptions).toEqual([items[2], items[4]]);
+    expect(controller.selectedOption).toBe(items[2]);
+  });
+
+  it("clears the selection with an empty array", () => {
+    const { items, controller } = setup({ selectedIndexes: [0, 1] });
+    controller.selectOptions([]);
+    expect(selected(items)).toEqual([]);
+    expect(items[0]!.getAttribute("aria-selected")).toBe("false");
+  });
+
+  it("doesn't fire appret-listbox-change", () => {
+    const { host, items, controller } = setup({ selectedIndexes: [] });
+    const details = changes(host);
+    controller.selectOptions([items[1]!]);
+    expect(details).toEqual([]);
+  });
+
+  it("moves the tab stop to the first selected option", () => {
+    const { items, controller } = setup({ selectedIndexes: [] });
+    controller.selectOptions([items[4]!, items[2]!]);
+    expect(tabStops(items)).toEqual([2]);
+  });
+
+  it("warns and ignores options that aren't among the options", () => {
+    const { items, controller } = setup({ selectedIndexes: [0] });
+    const outsider = document.createElement("li");
+    controller.selectOptions([items[1]!, outsider]);
+    expect(selected(items)).toEqual([0]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("not among options"),
+      [outsider],
+    );
+  });
+
+  it("warns and ignores disabled options", () => {
+    const { items, controller } = setup({
+      disabled: [2],
+      selectedIndexes: [0],
+    });
+    controller.selectOptions([items[1]!, items[2]!]);
+    expect(selected(items)).toEqual([0]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("disabled"), [
+      items[2],
+    ]);
+  });
+
+  it("warns and does nothing in single selection", () => {
+    const { items, controller } = setup();
+    controller.selectOptions([items[1]!]);
+    expect(selected(items)).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("needs multiple selection"),
+    );
+  });
+
+  it("returns a copy of the selection", () => {
+    const { items, controller } = setup({ selectedIndexes: [0] });
+    controller.selectedOptions.push(items[1]!);
+    expect(controller.selectedOptions).toEqual([items[0]]);
+  });
+
+  it("warns and does nothing after destroy()", () => {
+    const { items, controller } = setup({ selectedIndexes: [] });
+    controller.destroy();
+    controller.selectOptions([items[1]!]);
+    expect(items[1]!.hasAttribute("aria-selected")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("after destroy()"),
+    );
+  });
+});
+
+describe("update()", () => {
+  function addItem(list: HTMLElement, text: string) {
+    const item = document.createElement("li");
+    item.textContent = text;
+    list.append(item);
+    return item;
+  }
+
+  describe("selection", () => {
+    it("keeps the selected option when it's still there", () => {
+      const { list, items, controller } = setup({ selectedIndex: 2 });
+      const added = addItem(list, "Date");
+      controller.update({ options: [...items, added] });
+      expect(controller.selectedOption).toBe(items[2]);
+      expect(items[2]!.getAttribute("aria-selected")).toBe("true");
+    });
+
+    it("selects nothing when the selected option is removed", () => {
+      const { items, controller } = setup({ selectedIndex: 2 });
+      controller.update({ options: items.filter((_, i) => i !== 2) });
+      expect(controller.selectedOption).toBeNull();
+      expect(items[2]!.hasAttribute("aria-selected")).toBe(false);
+    });
+
+    it("drops the selected option when it became disabled", () => {
+      const { items, controller } = setup({ selectedIndex: 2 });
+      items[2]!.setAttribute("aria-disabled", "true");
+      controller.update({});
+      expect(controller.selectedOption).toBeNull();
+    });
+
+    it("keeps the selected options that are still there in multiple selection", () => {
+      const { items, controller } = setup({ selectedIndexes: [1, 3] });
+      controller.update({ options: items.filter((_, i) => i !== 1) });
+      expect(controller.selectedOptions).toEqual([items[3]]);
+      expect(items[3]!.getAttribute("aria-selected")).toBe("true");
+    });
+
+    it("doesn't fire appret-listbox-change", () => {
+      const { host, items, controller } = setup({ selectedIndex: 2 });
+      const details = changes(host);
+      controller.update({ options: items.slice(0, 2) });
+      expect(details).toEqual([]);
+    });
+
+    it("keeps the selection when switching to multiple selection", () => {
+      const { items, controller } = setup({ selectedIndex: 2 });
+      controller.update({ multiple: true });
+      expect(controller.selectedOptions).toEqual([items[2]]);
+      expect(items[0]!.getAttribute("aria-selected")).toBe("false");
+      items[0]!.click();
+      expect(controller.selectedOptions).toEqual([items[0], items[2]]);
+    });
+
+    it("keeps the first selected option when switching to single selection", () => {
+      const { list, items, controller } = setup({ selectedIndexes: [1, 3] });
+      controller.update({ multiple: false });
+      expect(controller.selectedOptions).toEqual([items[1]]);
+      expect(list.getAttribute("aria-multiselectable")).toBe("false");
+      expect(items[3]!.hasAttribute("aria-selected")).toBe(false);
+      expect(items[0]!.hasAttribute("aria-selected")).toBe(false);
+    });
+
+    it("stops selection from following focus after switching to multiple selection", () => {
+      const { items, controller } = setup({
+        config: { selectionFollowsFocus: true },
+      });
+      controller.update({ multiple: true });
+      items[0]!.focus();
+      press("ArrowDown");
+      expect(selected(items)).toEqual([]);
+    });
+  });
+
+  describe("tab stop", () => {
+    it("stays on the active option when it's still there", () => {
+      const { list, items, controller } = setup();
+      items[0]!.focus();
+      press("ArrowDown");
+      press("ArrowDown");
+      controller.update({ options: [...items, addItem(list, "Date")] });
+      expect(tabStops(items)).toEqual([2]);
+    });
+
+    it("goes to the selected option when the active one is removed", () => {
+      const { items, controller } = setup({ selectedIndex: 1 });
+      items[1]!.focus();
+      press("ArrowDown");
+      press("ArrowDown");
+      controller.update({ options: items.filter((_, i) => i !== 3) });
+      expect(tabStops(items)).toEqual([1]);
+    });
+
+    it("goes to the first enabled option when nothing is selected", () => {
+      const { items, controller } = setup({ disabled: [1] });
+      controller.update({ options: items.slice(1, 3) });
+      expect(tabStops(items)).toEqual([2]);
+    });
+  });
+
+  describe("added and removed options", () => {
+    it("handle roles, keyboard and clicks for added options", () => {
+      const { list, items, controller } = setup();
+      const added = addItem(list, "Date");
+      controller.update({ options: [...items, added] });
+      expect(added.getAttribute("role")).toBe("option");
+      items[0]!.focus();
+      press("End");
+      expect(document.activeElement).toBe(added);
+      added.click();
+      expect(controller.selectedOption).toBe(added);
+    });
+
+    it("give removed options their original markup back", () => {
+      const { items, controller } = setup({ selectedIndex: 4 });
+      controller.update({ options: items.slice(0, 3) });
+      for (const item of items.slice(3)) {
+        expect(item.hasAttribute("role")).toBe(false);
+        expect(item.hasAttribute("tabindex")).toBe(false);
+        expect(item.hasAttribute("aria-selected")).toBe(false);
+      }
+    });
+
+    it("stop handling clicks and keys on removed options", () => {
+      const { items, controller } = setup();
+      controller.update({ options: items.slice(0, 3) });
+      items[4]!.click();
+      expect(controller.selectedOption).toBeNull();
+      items[4]!.focus();
+      const event = press("ArrowUp");
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it("doesn't duplicate listeners on options that stay", () => {
+      const { host, items, controller } = setup({ selectedIndexes: [] });
+      controller.update({});
+      controller.update({});
+      const details = changes(host);
+      items[1]!.click();
+      expect(details).toHaveLength(1);
+      expect(controller.selectedOptions).toEqual([items[1]]);
+    });
+
+    it("ignores changes to the arrays until update() is called", () => {
+      const { list, items, controller } = setup();
+      const added = addItem(list, "Date");
+      items.push(added);
+      expect(added.hasAttribute("role")).toBe(false);
+      controller.update({});
+      expect(added.hasAttribute("role")).toBe(false);
+      controller.update({ options: items });
+      expect(added.getAttribute("role")).toBe("option");
+    });
+  });
+
+  describe("options", () => {
+    it("can switch from options to groups", () => {
+      const { list, controller, items } = setup();
+      const group = document.createElement("ul");
+      group.append(...items.slice(0, 2));
+      list.prepend(group);
+      controller.update({
+        groups: [{ group, options: items.slice(0, 2), label: "Favourites" }],
+      });
+      expect(group.getAttribute("role")).toBe("group");
+      expect(items[2]!.hasAttribute("role")).toBe(false);
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it("can switch from groups to options", () => {
+      const { groups, items, controller } = setupGroups();
+      controller.update({ options: items });
+      expect(groups[0]!.group.hasAttribute("role")).toBe(false);
+      expect(items[0]!.getAttribute("role")).toBe("option");
+    });
+
+    it("can switch to a horizontal listbox", () => {
+      const { list, items, controller } = setup();
+      controller.update({ orientation: "horizontal" });
+      expect(list.getAttribute("aria-orientation")).toBe("horizontal");
+      items[0]!.focus();
+      press("ArrowRight");
+      expect(focused(items)).toBe(1);
+    });
+
+    it("keeps options that aren't passed", () => {
+      const { list, controller } = setup({ config: { orientation: "horizontal" } });
+      controller.update({ label: "Fruits" });
+      expect(list.getAttribute("aria-orientation")).toBe("horizontal");
+      expect(list.getAttribute("aria-label")).toBe("Fruits");
+    });
+
+    it("replaces label with labelledBy", () => {
+      const heading = document.createElement("h2");
+      heading.id = "fruit-heading";
+      document.body.append(heading);
+      const { list, controller } = setup();
+      controller.update({ labelledBy: "fruit-heading" });
+      expect(list.hasAttribute("aria-label")).toBe(false);
+      expect(list.getAttribute("aria-labelledby")).toBe("fruit-heading");
+    });
+  });
+
+  describe("invalid updates", () => {
+    it("throw and leave the listbox working", () => {
+      const { items, controller } = setup({ selectedIndex: 1 });
+      expect(() => controller.update({ options: [] })).toThrow(
+        "no options found",
+      );
+      expect(selected(items)).toEqual([1]);
+      items[0]!.focus();
+      press("ArrowDown");
+      expect(focused(items)).toBe(1);
+    });
+  });
+
+  it("warns and does nothing after destroy()", () => {
+    const { list, controller } = setup();
+    controller.destroy();
+    controller.update({ label: "Fruits" });
+    expect(list.hasAttribute("aria-label")).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("after destroy()"),
+    );
+  });
+});
+
+describe("focusActiveOption()", () => {
+  it("moves focus to the active option", () => {
+    const { items, controller } = setup({ selectedIndex: 3 });
+    controller.focusActiveOption();
+    expect(focused(items)).toBe(3);
+  });
+
+  it("brings focus back after the focused option was removed", () => {
+    const { items, controller } = setup();
+    items[0]!.focus();
+    press("End");
+    items[4]!.remove();
+    controller.update({ options: items.slice(0, 4) });
+    controller.focusActiveOption();
+    expect(focused(items)).toBe(0);
+  });
+});
+
 describe("destroy()", () => {
   it("restores the original markup", () => {
     const host = document.createElement("div");
@@ -1391,6 +1806,12 @@ describe("destroy()", () => {
       expect(el.hasAttribute("tabindex")).toBe(false);
       expect(el.hasAttribute("aria-selected")).toBe(false);
     }
+  });
+
+  it("can be called twice", () => {
+    const { controller } = setup();
+    controller.destroy();
+    expect(() => controller.destroy()).not.toThrow();
   });
 
   it("stops handling clicks and keys", () => {
