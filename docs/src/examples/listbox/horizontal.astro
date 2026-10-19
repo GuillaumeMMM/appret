@@ -1,0 +1,20 @@
+<div id="listbox-horizontal">
+  <ul class="list">
+    <li>Small</li>
+    <li>Medium</li>
+    <li>Large</li>
+  </ul>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-horizontal")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
+    label: "Size",
+    orientation: "horizontal",
+  });
+</script>

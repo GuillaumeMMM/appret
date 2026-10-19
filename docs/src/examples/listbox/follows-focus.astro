@@ -1,0 +1,21 @@
+<div id="listbox-follows-focus">
+  <ul class="list">
+    <li>Apple</li>
+    <li>Banana</li>
+    <li>Cherry</li>
+    <li>Grape</li>
+  </ul>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-follows-focus")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
+    label: "Fruit",
+    selectionFollowsFocus: true,
+  });
+</script>

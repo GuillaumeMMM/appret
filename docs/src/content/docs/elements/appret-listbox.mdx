@@ -1,0 +1,98 @@
+---
+title: <appret-listbox>
+description: A listbox from HTML, with no JavaScript to write.
+draft: true
+---
+
+import { Code } from "@astrojs/starlight/components";
+
+import Basic from "../../../examples/listbox-element/basic.astro";
+import basicSource from "../../../examples/listbox-element/basic.astro?raw";
+import Attributes from "../../../examples/listbox-element/attributes.astro";
+import attributesSource from "../../../examples/listbox-element/attributes.astro?raw";
+import Multiple from "../../../examples/listbox-element/multiple.astro";
+import multipleSource from "../../../examples/listbox-element/multiple.astro?raw";
+import Groups from "../../../examples/listbox-element/groups.astro";
+import groupsSource from "../../../examples/listbox-element/groups.astro?raw";
+import Select from "../../../examples/listbox-element/select.astro";
+import selectSource from "../../../examples/listbox-element/select.astro?raw";
+
+`<appret-listbox>` is a custom element that wraps your HTML and makes it a listbox following the [WAI-ARIA listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/) using the [Apprêt listbox controller](/controllers/listbox/). It finds its parts in your markup from `data-appret-part` attributes. It adds no styles and no shadow DOM.
+
+<Basic />
+
+## Usage
+
+Load the element once, from a CDN or with a bundler:
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/appret/dist/define/listbox.js"></script>
+```
+
+```js
+import "appret/define/listbox";
+```
+
+Then mark the parts of your markup:
+
+<Code code={basicSource} lang="astro" />
+
+## Examples
+
+### Attributes
+
+<Attributes />
+<Code code={attributesSource} lang="astro" />
+
+### Multiple selection
+
+Like `<select multiple>`, the `multiple` attribute alone turns it on.
+
+<Multiple />
+<Code code={multipleSource} lang="astro" />
+
+### Groups
+
+Wrap options in `listbox.group` parts. A `listbox.group-label` inside a group labels it.
+
+<Groups />
+<Code code={groupsSource} lang="astro" />
+
+### Selecting from JavaScript
+
+<Select />
+<Code code={selectSource} lang="astro" />
+
+## Reference
+
+### Parts
+
+| `data-appret-part` | |
+| --- | --- |
+| `listbox.list` | Options container. |
+| `listbox.option` | An option, inside the list or a group. |
+| `listbox.group` | A group of options, inside the list. Optional. |
+| `listbox.group-label` | The label of a group, inside it. Optional. |
+
+### Attributes
+
+| Attribute | Type | Default | |
+| --- | --- | --- | --- |
+| `label` | `string` | | Accessible name of the list. |
+| `labelledby` | `string` | | Space-separated IDs of elements labelling the listbox. |
+| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | |
+| `selection-follows-focus` | `boolean` | `false` | Whether moving focus also selects the option. Ignored with `multiple`. |
+| `multiple` | `boolean` | `false` | Allows selecting several options. |
+
+### Properties and methods
+
+| | |
+| --- | --- |
+| `select(option \| option[] \| null)` | Replaces the selection. `null` clears it. |
+| `selectedOption` | Gets the first selected option. `null` when there is none. |
+| `selectedOptions` | Gets the selected options. |
+| `focus()` | Moves focus to the active option (reachable with <kbd>Tab</kbd>). |
+
+## WAI-ARIA pattern
+
+Keyboard support follows the [WAI-ARIA listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/), as described for the [listbox controller](/controllers/listbox/).

@@ -1,0 +1,32 @@
+<appret-listbox id="listbox-select" label="Fruit">
+  <ul data-appret-part="listbox.list">
+    <li data-appret-part="listbox.option">Apple</li>
+    <li data-appret-part="listbox.option">Banana</li>
+    <li data-appret-part="listbox.option">Cherry</li>
+  </ul>
+</appret-listbox>
+<p>
+  <button type="button" id="listbox-select-cherry">Choose cherry</button>
+  <button type="button" id="listbox-select-clear">Clear</button>
+  Last change: <output id="listbox-select-output">none yet</output>
+</p>
+
+<script>
+  import "appret/define/listbox";
+
+  const listbox = document.querySelector<HTMLElementTagNameMap["appret-listbox"]>("#listbox-select")!;
+  const options = [...listbox.querySelectorAll<HTMLElement>('[data-appret-part~="listbox.option"]')];
+  const output = document.querySelector("#listbox-select-output")!;
+
+  document.querySelector("#listbox-select-cherry")!.addEventListener("click", () => {
+    listbox.select(options[2]!);
+  });
+
+  document.querySelector("#listbox-select-clear")!.addEventListener("click", () => {
+    listbox.select(null);
+  });
+
+  listbox.addEventListener("appret-listbox-change", (event) => {
+    output.textContent = event.detail.option?.textContent ?? "none";
+  });
+</script>

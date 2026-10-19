@@ -5,3 +5,11 @@ export type {
   TabsChangeEvent,
 } from "./tabs/controller.js";
 export { TabsElement } from "./tabs/element.js";
+export { ListboxController } from "./listbox/controller.js";
+export type {
+  ListboxControllerConfig,
+  ListboxGroup,
+  ListboxChangeDetail,
+  ListboxChangeEvent,
+} from "./listbox/controller.js";
+export { ListboxElement } from "./listbox/element.js";

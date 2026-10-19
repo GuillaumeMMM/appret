@@ -29,6 +29,11 @@
       "appret:source": "./src/define/tabs.ts",
       "types": "./dist/define/tabs.d.ts",
       "default": "./dist/define/tabs.js"
+    },
+    "./define/listbox": {
+      "appret:source": "./src/define/listbox.ts",
+      "types": "./dist/define/listbox.d.ts",
+      "default": "./dist/define/listbox.js"
     }
   },
   "scripts": {

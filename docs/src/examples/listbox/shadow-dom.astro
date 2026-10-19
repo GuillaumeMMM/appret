@@ -1,0 +1,35 @@
+<p id="listbox-shadow-dom-heading">Colour</p>
+<example-shadow-listbox>
+  <li slot="option">Red</li>
+  <li slot="option">Green</li>
+  <li slot="option">Blue</li>
+</example-shadow-listbox>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  class ExampleShadowListbox extends HTMLElement {
+    #controller?: ListboxController;
+
+    connectedCallback() {
+      const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+      root.innerHTML = `<ul style="list-style: none; padding: 0"><slot name="option"></slot></ul>`;
+
+      this.#controller = new ListboxController(this, {
+        list: root.querySelector("ul")!,
+        options: [...this.querySelectorAll<HTMLElement>('[slot="option"]')],
+        label: {
+          byElements: [document.getElementById("listbox-shadow-dom-heading")!],
+        },
+      });
+    }
+
+    disconnectedCallback() {
+      this.#controller?.destroy();
+    }
+  }
+
+  if (!customElements.get("example-shadow-listbox")) {
+    customElements.define("example-shadow-listbox", ExampleShadowListbox);
+  }
+</script>

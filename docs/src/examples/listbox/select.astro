@@ -1,0 +1,33 @@
+<div id="listbox-select">
+  <ul class="list">
+    <li>Apple</li>
+    <li>Banana</li>
+    <li>Cherry</li>
+  </ul>
+  <p>
+    <button type="button" class="cherry">Select cherry</button>
+    <button type="button" class="clear">Clear</button>
+  </p>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-select")!;
+  const options = [...host.querySelectorAll<HTMLElement>(".list > li")];
+
+  const controller = new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options,
+    label: "Fruit",
+    initialSelection: options[1],
+  });
+
+  host.querySelector(".cherry")!.addEventListener("click", () => {
+    controller.select(options[2]!);
+  });
+
+  host.querySelector(".clear")!.addEventListener("click", () => {
+    controller.select(null);
+  });
+</script>

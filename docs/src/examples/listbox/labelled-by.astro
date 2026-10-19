@@ -1,0 +1,20 @@
+<div id="listbox-labelled-by">
+  <p id="listbox-labelled-by-heading">Favourite fruit</p>
+  <ul class="list">
+    <li>Apple</li>
+    <li>Banana</li>
+    <li>Cherry</li>
+  </ul>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-labelled-by")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
+    label: { byId: "listbox-labelled-by-heading" },
+  });
+</script>

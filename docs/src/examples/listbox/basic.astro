@@ -1,11 +1,9 @@
 <div id="listbox-basic">
-  <span id="listbox-basic-label">Fruit</span>
   <ul class="list">
     <li>Apple</li>
-    <li aria-disabled="true">Banana</li>
+    <li>Banana</li>
     <li>Cherry</li>
     <li>Grape</li>
-    <li>Avocado</li>
   </ul>
 </div>
 
@@ -13,13 +11,10 @@
   import { ListboxController } from "appret/listbox";
 
   const host = document.querySelector<HTMLElement>("#listbox-basic")!;
-  const options = [...host.querySelectorAll<HTMLElement>(".list > li")];
 
   new ListboxController(host, {
     list: host.querySelector(".list")!,
-    options,
-    label: { byId: "listbox-basic-label" },
-    selectionFollowsFocus: true,
-    initialSelection: options[2],
+    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
+    label: "Fruit",
   });
 </script>

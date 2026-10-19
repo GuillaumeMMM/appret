@@ -1,0 +1,45 @@
+<div id="listbox-update">
+  <p>
+    <button type="button" class="add">Add an option</button>
+    <button type="button" class="remove">Remove the selected option</button>
+  </p>
+  <ul class="list">
+    <li>Option 1</li>
+    <li>Option 2</li>
+  </ul>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-update")!;
+  const list = host.querySelector<HTMLElement>(".list")!;
+  const options = [...list.querySelectorAll<HTMLElement>("li")];
+  let count = options.length;
+
+  const controller = new ListboxController(host, {
+    list,
+    options,
+    label: "Options",
+  });
+
+  function addOption() {
+    count++;
+    const option = document.createElement("li");
+    option.textContent = `Option ${count}`;
+    list.append(option);
+    options.push(option);
+    controller.update({ options });
+  }
+
+  function removeSelectedOption() {
+    const selected = controller.selectedOption;
+    if (!selected || options.length === 1) return;
+    options.splice(options.indexOf(selected), 1);
+    selected.remove();
+    controller.update({ options });
+  }
+
+  host.querySelector(".add")!.addEventListener("click", addOption);
+  host.querySelector(".remove")!.addEventListener("click", removeSelectedOption);
+</script>

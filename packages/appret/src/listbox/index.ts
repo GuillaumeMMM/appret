@@ -5,3 +5,4 @@ export type {
   ListboxChangeDetail,
   ListboxChangeEvent,
 } from "./controller.js";
+export { ListboxElement } from "./element.js";

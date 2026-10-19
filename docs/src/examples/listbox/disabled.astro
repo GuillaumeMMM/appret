@@ -1,0 +1,21 @@
+<div id="listbox-disabled">
+  <ul class="list">
+    <li>Apple</li>
+    <li aria-disabled="true">Banana</li>
+    <li>Cherry</li>
+    <li aria-disabled="true">Grape</li>
+    <li>Kiwi</li>
+  </ul>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-disabled")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
+    label: "Fruit",
+  });
+</script>

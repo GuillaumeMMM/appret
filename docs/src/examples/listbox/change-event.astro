@@ -1,0 +1,28 @@
+<div id="listbox-change-event">
+  <ul class="list">
+    <li>English</li>
+    <li>French</li>
+    <li>German</li>
+    <li>Spanish</li>
+  </ul>
+  <p>Selected: <output>none yet</output></p>
+</div>
+
+<script>
+  import { ListboxController } from "appret/listbox";
+
+  const host = document.querySelector<HTMLElement>("#listbox-change-event")!;
+  const output = host.querySelector("output")!;
+
+  new ListboxController(host, {
+    list: host.querySelector(".list")!,
+    options: [...host.querySelectorAll<HTMLElement>(".list > li")],
+    label: "Languages",
+    multiple: true,
+  });
+
+  host.addEventListener("appret-listbox-change", (event) => {
+    const names = event.detail.options.map((option) => option.textContent);
+    output.textContent = names.join(", ") || "none";
+  });
+</script>

@@ -233,11 +233,11 @@ describe("single selection", () => {
   it("selects nothing by default", () => {
     const { items } = setup();
     for (const item of items) {
-      expect(item.hasAttribute("aria-selected")).toBe(false);
+      expect(item.getAttribute("aria-selected")).toBe("false");
     }
   });
 
-  it("selects initialSelectedOption and makes it the tab stop", () => {
+  it("selects initialSelection and makes it the tab stop", () => {
     const { items } = setup({
       selectedIndex: 2,
     });
@@ -245,11 +245,11 @@ describe("single selection", () => {
     expect(tabStops(items)).toEqual([2]);
   });
 
-  it("leaves aria-selected off the options that aren't selected", () => {
+  it("sets aria-selected false on the options that aren't selected", () => {
     const { items } = setup({
       selectedIndex: 2,
     });
-    expect(items[0]!.hasAttribute("aria-selected")).toBe(false);
+    expect(items[0]!.getAttribute("aria-selected")).toBe("false");
   });
 
   it("warns and selects nothing when initialSelection is disabled", () => {
@@ -297,7 +297,7 @@ describe("single selection", () => {
       items[2]!.click();
       items[3]!.click();
       expect(selected(items)).toEqual([3]);
-      expect(items[2]!.hasAttribute("aria-selected")).toBe(false);
+      expect(items[2]!.getAttribute("aria-selected")).toBe("false");
     });
 
     it("are ignored on a disabled option", () => {
@@ -441,6 +441,47 @@ describe("keyboard", () => {
     });
     press("ArrowDown");
     expect(focused(items)).toBe(0);
+  });
+
+  describe("leaving the listbox", () => {
+    function leave() {
+      const outside = document.createElement("button");
+      document.body.append(outside);
+      outside.focus();
+    }
+
+    it("brings Tab back to the selected option after focus moved without selecting", () => {
+      const { items } = setup({ selectedIndex: 1 });
+      items[1]!.focus();
+      press("ArrowDown");
+      press("ArrowDown");
+      leave();
+      expect(tabStops(items)).toEqual([1]);
+    });
+
+    it("brings Tab back to the first enabled option when nothing is selected", () => {
+      const { items } = setup({ disabled: [0] });
+      items[1]!.focus();
+      press("End");
+      leave();
+      expect(tabStops(items)).toEqual([1]);
+    });
+
+    it("brings Tab back to the first selected option in multiple selection", () => {
+      const { items } = setup({ selectedIndexes: [3, 1] });
+      items[1]!.focus();
+      press("End");
+      leave();
+      expect(tabStops(items)).toEqual([1]);
+    });
+
+    it("keeps the tab stop on the focused option while focus stays inside", () => {
+      const { items } = setup({ selectedIndex: 0 });
+      items[0]!.focus();
+      press("ArrowDown");
+      expect(tabStops(items)).toEqual([1]);
+      expect(focused(items)).toBe(1);
+    });
   });
 
   describe("disabled options", () => {
@@ -675,6 +716,14 @@ describe("type-ahead", () => {
     const event = press("z");
     expect(focused(items)).toBe(0);
     expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("matches an option's aria-label before its text", () => {
+    const { items } = setup({ texts: ["Apple", "🍌", "Cherry"] });
+    items[1]!.setAttribute("aria-label", "Banana");
+    items[0]!.focus();
+    press("b");
+    expect(focused(items)).toBe(1);
   });
 
   it("treats Space as part of the search while typing", () => {
@@ -1255,6 +1304,21 @@ describe("errors and warnings", () => {
     ]);
   });
 
+  it("warns about options with aria-checked", () => {
+    const list = document.createElement("ul");
+    const checked = document.createElement("li");
+    checked.setAttribute("aria-checked", "true");
+    list.append(checked);
+    document.body.append(list);
+    controllers.push(
+      new ListboxController(list, { list, options: [checked], label: "Fruit" }),
+    );
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("aria-checked"),
+      [checked],
+    );
+  });
+
   it("treats blank label IDs as no label", () => {
     const { list } = setup({ config: { label: { byId: "  " } } });
     expect(list.hasAttribute("aria-labelledby")).toBe(false);
@@ -1382,7 +1446,7 @@ describe("select()", () => {
     const { items, controller } = setup({ selectedIndex: 2 });
     controller.select(null);
     expect(selected(items)).toEqual([]);
-    expect(items[2]!.hasAttribute("aria-selected")).toBe(false);
+    expect(items[2]!.getAttribute("aria-selected")).toBe("false");
     expect(controller.selectedOption).toBeNull();
     expect(controller.selectedOptions).toEqual([]);
   });
@@ -1614,8 +1678,8 @@ describe("update()", () => {
       controller.update({ multiple: false });
       expect(controller.selectedOptions).toEqual([items[1]]);
       expect(list.getAttribute("aria-multiselectable")).toBe("false");
-      expect(items[3]!.hasAttribute("aria-selected")).toBe(false);
-      expect(items[0]!.hasAttribute("aria-selected")).toBe(false);
+      expect(items[3]!.getAttribute("aria-selected")).toBe("false");
+      expect(items[0]!.getAttribute("aria-selected")).toBe("false");
     });
 
     it("stops selection from following focus after switching to multiple selection", () => {

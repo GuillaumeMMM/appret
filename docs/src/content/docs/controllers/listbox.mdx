@@ -8,34 +8,209 @@ import { Code } from "@astrojs/starlight/components";
 
 import Basic from "../../../examples/listbox/basic.astro";
 import basicSource from "../../../examples/listbox/basic.astro?raw";
+import LabelledBy from "../../../examples/listbox/labelled-by.astro";
+import labelledBySource from "../../../examples/listbox/labelled-by.astro?raw";
+import Horizontal from "../../../examples/listbox/horizontal.astro";
+import horizontalSource from "../../../examples/listbox/horizontal.astro?raw";
+import FollowsFocus from "../../../examples/listbox/follows-focus.astro";
+import followsFocusSource from "../../../examples/listbox/follows-focus.astro?raw";
+import Disabled from "../../../examples/listbox/disabled.astro";
+import disabledSource from "../../../examples/listbox/disabled.astro?raw";
 import Multiple from "../../../examples/listbox/multiple.astro";
 import multipleSource from "../../../examples/listbox/multiple.astro?raw";
 import Groups from "../../../examples/listbox/groups.astro";
 import groupsSource from "../../../examples/listbox/groups.astro?raw";
 import GroupsMultiple from "../../../examples/listbox/groups-multiple.astro";
 import groupsMultipleSource from "../../../examples/listbox/groups-multiple.astro?raw";
+import Select from "../../../examples/listbox/select.astro";
+import selectSource from "../../../examples/listbox/select.astro?raw";
+import ChangeEvent from "../../../examples/listbox/change-event.astro";
+import changeEventSource from "../../../examples/listbox/change-event.astro?raw";
+import Update from "../../../examples/listbox/update.astro";
+import updateSource from "../../../examples/listbox/update.astro?raw";
+import ShadowDom from "../../../examples/listbox/shadow-dom.astro";
+import shadowDomSource from "../../../examples/listbox/shadow-dom.astro?raw";
+import Destroy from "../../../examples/listbox/destroy.astro";
+import destroySource from "../../../examples/listbox/destroy.astro?raw";
 
-`ListboxController` turns your own markup into a listbox following the
+`ListboxController` turns your own markup into a listbox, following the
 [WAI-ARIA listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
 
 <Basic />
 
+## Usage
+
+Pass a host element, the list and its options.
+
 <Code code={basicSource} lang="astro" />
 
-## Multiple selection
+## Examples
+
+### Labelling
+
+A text `label` adds an `aria-label` attribute to the list. If the listbox must be labelled by an existing text somewhere else on the page, use `label: { byId }` with the ID or IDs of a visible label.
+
+When the label is outside your component's shadow root where IDs can't reach, or when it has no ID, use `label: { byElements }` with a list of elements.
+
+<LabelledBy />
+<Code code={labelledBySource} lang="astro" />
+
+### Horizontal listbox
+
+With `orientation: "horizontal"`, <kbd>Left Arrow</kbd> and <kbd>Right Arrow</kbd> move between options instead of <kbd>Up Arrow</kbd> and <kbd>Down Arrow</kbd>.
+
+<Horizontal />
+<Code code={horizontalSource} lang="astro" />
+
+### Selection following focus
+
+By default, arrow keys move focus, and <kbd>Space</kbd> selects. With `selectionFollowsFocus: true`, moving focus also selects the option.
+
+<FollowsFocus />
+<Code code={followsFocusSource} lang="astro" />
+
+### Disabled options
+
+Options with `aria-disabled="true"` are skipped by the keyboard and can't be selected. `aria-disabled="true"` on a group or on the list disables all of its options.
+
+<Disabled />
+<Code code={disabledSource} lang="astro" />
+
+### Multiple selection
+
+With `multiple: true`, <kbd>Space</kbd> and clicks toggle options, <kbd>Shift</kbd> + arrow keys extend the selection, and <kbd>Ctrl</kbd> + <kbd>A</kbd> selects all.
+
+If selecting or unselecting all options matters to your users, add "Select all" and "Unselect all" buttons that call `select()`.
 
 <Multiple />
-
 <Code code={multipleSource} lang="astro" />
 
-## Groups
+### Groups
+
+Pass groups instead of options. Each group has its element, its options and an optional label. A label inside the list gets `role="presentation"`.
 
 <Groups />
-
 <Code code={groupsSource} lang="astro" />
 
-## Groups with multiple selection
+### Groups with multiple selection
 
 <GroupsMultiple />
-
 <Code code={groupsMultipleSource} lang="astro" />
+
+### Selecting from code
+
+`initialSelection` sets the first selection, and `select()` changes it later. `select(null)` clears it.
+Neither fires `appret-listbox-change`.
+
+<Select />
+<Code code={selectSource} lang="astro" />
+
+### Reacting to changes
+
+`appret-listbox-change` fires on the host when the user changes the selection. `event.detail` has the first selected `option` and all the selected `options`.
+
+<ChangeEvent />
+<Code code={changeEventSource} lang="astro" />
+
+### Updating options
+
+Change the DOM first, then call `update()` with the new options. Selected options that are still there stay selected. If the focused option was removed, you are responsible for placing the focus back in the listbox with `focus()`.
+
+<Update />
+<Code code={updateSource} lang="astro" />
+
+### Inside a shadow root
+
+Options can be slotted from the page into a list inside your component's shadow root.
+To label the listbox from outside the shadow root, pass the element with `label: { byElements }`.
+
+<ShadowDom />
+<Code code={shadowDomSource} lang="astro" />
+
+### Cleaning up
+
+`destroy()` removes listeners and restores the original markup.
+
+<Destroy />
+<Code code={destroySource} lang="astro" />
+
+## Reference
+
+### Config
+
+| Property | Type | Default | |
+| --- | --- | --- | --- |
+| `list` | `HTMLElement` | | The options container. |
+| `options` | `HTMLElement[] \| ListboxGroup[]` | | The options, or groups of options. |
+| `label` | `string \| { byId: string } \| { byElements: Element[] }` | | A text for `aria-label`, space-separated IDs for `aria-labelledby`, or labelling elements, also outside the shadow root. |
+| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | Which arrow keys move between options. |
+| `multiple` | `boolean` | `false` | Whether several options can be selected. |
+| `selectionFollowsFocus` | `boolean` | `false` | Whether moving focus also selects the option. Only without `multiple`. |
+| `initialSelection` | `HTMLElement \| HTMLElement[]` | none | Option, or options with `multiple`, selected at setup. |
+
+### ListboxGroup
+
+| Property | Type | |
+| --- | --- | --- |
+| `group` | `HTMLElement` | The group container, inside the list. |
+| `options` | `HTMLElement[]` | The options of the group. |
+| `label` | `string \| { byId: string } \| { byElements: Element[] }` | Optional. Labels the group. |
+
+### Methods and properties
+
+| | |
+| --- | --- |
+| `select(option \| option[] \| null)` | Replaces the selection. `null` clears it. Doesn't move focus or fire an event. |
+| `selectedOption` | Gets the first selected option, or `null`. |
+| `selectedOptions` | Gets the selected options. |
+| `update(config)` | Applies changes to the config (for example new `options`). |
+| `focus()` | Moves focus to the option reachable with <kbd>Tab</kbd>. |
+| `destroy()` | Removes listeners and restores the original markup. |
+
+## WAI-ARIA pattern
+
+Requirements of the [WAI-ARIA listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
+
+### Roles, states and properties
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| The container has role `listbox`. | <span role="img" aria-label="Implemented">✅</span> | |
+| Options have role `option`, inside the `listbox` or a group. | <span role="img" aria-label="Implemented">✅</span> | Misplaced options are reported with a warning. |
+| Groups have role `group`, inside the `listbox`. | <span role="img" aria-label="Implemented">✅</span> | |
+| Groups contain at least one option. | <span role="img" aria-label="Implemented">✅</span> | Empty groups are reported with a warning. |
+| Groups are labelled. | <span role="img" aria-label="Implemented">✅</span> | With the group's `label`. A missing label is reported with a warning. |
+| The `listbox` is labelled. | <span role="img" aria-label="Implemented">✅</span> | A missing label is reported with a warning. |
+| `aria-multiselectable="true"` with multiple selection. | <span role="img" aria-label="Implemented">✅</span> | |
+| Selection uses `aria-selected` or `aria-checked`, not both. | <span role="img" aria-label="Implemented">✅</span> | The controller uses `aria-selected`. Options with `aria-checked` are reported with a warning. |
+| Selected options have `aria-selected="true"`. | <span role="img" aria-label="Implemented">✅</span> | Only one without multiple selection. |
+| Unselected options have `aria-selected="false"`. | <span role="img" aria-label="Implemented">✅</span> | |
+| `aria-setsize` and `aria-posinset` when not all options are in the DOM. | <span role="img" aria-label="Left to the author">❌</span> | Virtualization belongs to your code. |
+| `aria-orientation="horizontal"` for a horizontal `listbox`. | <span role="img" aria-label="Implemented">✅</span> | |
+
+### Keyboard interaction
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Focusing a single-select listbox focuses the selected option, or the first one. | <span role="img" aria-label="Implemented">✅</span> | |
+| Focusing a multi-select listbox focuses the first selected option, or the first one. | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Down Arrow</kbd> / <kbd>Up Arrow</kbd> move focus to the next / previous option. | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Home</kbd> moves focus to the first option. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>End</kbd> moves focus to the last option. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| Selection follows focus in a single-select listbox. (Optional) | <span role="img" aria-label="Implemented">✅</span> | With `selectionFollowsFocus: true`. |
+| Typing moves focus to the next option starting with the typed characters. (Recommended) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Right Arrow</kbd> / <kbd>Left Arrow</kbd> act as <kbd>Down Arrow</kbd> / <kbd>Up Arrow</kbd> in a horizontal listbox. | <span role="img" aria-label="Implemented">✅</span> | Swapped in right-to-left. |
+| Focus moves with DOM focus or `aria-activedescendant`. | <span role="img" aria-label="Implemented">✅</span> | |
+
+#### Multiple selection
+
+The pattern offers two models. The controller implements the recommended one, where no modifier key needs to be held while navigating.
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| <kbd>Space</kbd> toggles the focused option. | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Shift</kbd> + <kbd>Down Arrow</kbd> / <kbd>Up Arrow</kbd> move focus and toggle that option. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Shift</kbd> + <kbd>Space</kbd> selects from the last selected option to the focused one. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Home</kbd> selects from the focused option to the first one. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>End</kbd> selects from the focused option to the last one. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Ctrl</kbd> + <kbd>A</kbd> selects all options. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |

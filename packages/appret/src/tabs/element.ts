@@ -1,4 +1,4 @@
-import { HTMLElementBase } from "../shared/element.js";
+import { enumAttribute, HTMLElementBase } from "../shared/element.js";
 import { TabsController, type TabsControllerConfig } from "./controller.js";
 
 type TabsParts = Pick<TabsControllerConfig, "tabs" | "panels"> & {
@@ -172,10 +172,12 @@ export class TabsElement extends HTMLElementBase {
         (labelledBy === null ? undefined : { byId: labelledBy }),
 
       //  Make sure that `orientation` has a valid value
-      orientation: enumAttribute(this, "orientation", [
-        "horizontal",
-        "vertical",
-      ] as const),
+      orientation: enumAttribute(
+        this,
+        "orientation",
+        ["horizontal", "vertical"],
+        "Appret tabs",
+      ),
 
       selectionFollowsFocus:
         this.getAttribute("selection-follows-focus") === null
@@ -232,26 +234,4 @@ function areSameParts(a: TabsParts, b: TabsParts): boolean {
   const same = (x: HTMLElement[], y: HTMLElement[]) =>
     x.length === y.length && x.every((el, i) => el === y[i]);
   return a.list === b.list && same(a.tabs, b.tabs) && same(a.panels, b.panels);
-}
-
-function enumAttribute<T extends string>(
-  element: Element,
-  name: string,
-  allowed: T[],
-): T | undefined {
-  const value = element.getAttribute(name);
-
-  if (value === null) {
-    return undefined;
-  }
-
-  if (allowed.includes(value as T)) {
-    return value as T;
-  }
-
-  console.warn(
-    `Appret tabs: invalid ${name}="${value}". Expected ${allowed.map((v) => `"${v}"`).join(" or ")}.`,
-  );
-
-  return undefined;
 }

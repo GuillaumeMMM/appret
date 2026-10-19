@@ -162,6 +162,17 @@ export class ListboxController {
         outsideOptions,
       );
     }
+
+    //  The selection is set with aria-selected, so aria-checked must not be used too
+    const checkedOptions = flatOptions.filter((o) =>
+      o.hasAttribute("aria-checked"),
+    );
+    if (checkedOptions.length > 0) {
+      console.warn(
+        "Appret listbox: these options have aria-checked, which conflicts with the aria-selected the listbox sets:",
+        checkedOptions,
+      );
+    }
   }
 
   #setAriaRoles() {
@@ -236,6 +247,26 @@ export class ListboxController {
         if (option) {
           this.#setSelected([option]);
         }
+      },
+      { signal: this.#abort.signal },
+    );
+
+    //  When focus leaves the listbox, Tab brings it back to the selected option
+    list.addEventListener(
+      "focusout",
+      (e) => {
+        if (
+          e.relatedTarget instanceof Node &&
+          flatTreeContains(list, e.relatedTarget)
+        ) {
+          return;
+        }
+
+        this.#setActiveOption(
+          this.#selected[0] ??
+            this.#findNonDisabledOption(-1, 1) ??
+            flatOptions[0]!,
+        );
       },
       { signal: this.#abort.signal },
     );
@@ -420,14 +451,12 @@ export class ListboxController {
     );
 
     for (const option of flatOptions) {
-      if (selected.includes(option)) {
-        this.#attributeRecorder.set(option, "aria-selected", "true");
-      } else if (this.#config.multiple) {
-        //  "false" tells that the option can be selected
-        this.#attributeRecorder.set(option, "aria-selected", "false");
-      } else if (option.getAttribute("aria-selected") === "true") {
-        this.#attributeRecorder.remove(option, "aria-selected");
-      }
+      //  The pattern wants "false" on every option that isn't selected
+      this.#attributeRecorder.set(
+        option,
+        "aria-selected",
+        String(selected.includes(option)),
+      );
     }
 
     if (notify && !areSameElementsLists(selected, this.#selected)) {
@@ -576,7 +605,9 @@ export class ListboxController {
 
     for (let i = 0; i < flatOptions.length; i++) {
       const option = flatOptions[(start + i) % flatOptions.length]!;
-      const text = (option.textContent ?? "").trim().toLowerCase();
+      //  Matches the option's name: its aria-label, or its text
+      const name = option.getAttribute("aria-label") ?? option.textContent ?? "";
+      const text = name.trim().toLowerCase();
 
       if (!this.#isDisabled(option) && text.startsWith(search)) {
         return option;
