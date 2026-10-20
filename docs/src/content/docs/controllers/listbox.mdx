@@ -4,6 +4,7 @@ description: Keyboard, focus and ARIA for a listbox, on your own markup.
 ---
 
 import { Code } from "@astrojs/starlight/components";
+import Demo from "../../../components/Demo.astro";
 
 import Basic from "../../../examples/listbox/basic.astro";
 import basicSource from "../../../examples/listbox/basic.astro?raw";
@@ -35,7 +36,7 @@ import destroySource from "../../../examples/listbox/destroy.astro?raw";
 `ListboxController` turns your own markup into a listbox, following the
 [WAI-ARIA listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
 
-<Basic />
+<Demo><Basic /></Demo>
 
 ## Usage
 
@@ -51,28 +52,28 @@ A text `label` adds an `aria-label` attribute to the list. If the listbox must b
 
 When the label is outside your component's shadow root where IDs can't reach, or when it has no ID, use `label: { byElements }` with a list of elements.
 
-<LabelledBy />
+<Demo><LabelledBy /></Demo>
 <Code code={labelledBySource} lang="astro" />
 
 ### Horizontal listbox
 
 With `orientation: "horizontal"`, <kbd>Left Arrow</kbd> and <kbd>Right Arrow</kbd> move between options instead of <kbd>Up Arrow</kbd> and <kbd>Down Arrow</kbd>.
 
-<Horizontal />
+<Demo><Horizontal /></Demo>
 <Code code={horizontalSource} lang="astro" />
 
 ### Selection following focus
 
 By default, arrow keys move focus, and <kbd>Space</kbd> selects. With `selectionFollowsFocus: true`, moving focus also selects the option.
 
-<FollowsFocus />
+<Demo><FollowsFocus /></Demo>
 <Code code={followsFocusSource} lang="astro" />
 
 ### Disabled options
 
 Options with `aria-disabled="true"` are skipped by the keyboard and can't be selected. `aria-disabled="true"` on a group or on the list disables all of its options.
 
-<Disabled />
+<Demo><Disabled /></Demo>
 <Code code={disabledSource} lang="astro" />
 
 ### Multiple selection
@@ -81,19 +82,19 @@ With `multiple: true`, <kbd>Space</kbd> and clicks toggle options, <kbd>Shift</k
 
 If selecting or unselecting all options matters to your users, add "Select all" and "Unselect all" buttons that call `select()`.
 
-<Multiple />
+<Demo><Multiple /></Demo>
 <Code code={multipleSource} lang="astro" />
 
 ### Groups
 
 Pass groups instead of options. Each group has its element, its options and an optional label. A label inside the list gets `role="presentation"`.
 
-<Groups />
+<Demo><Groups /></Demo>
 <Code code={groupsSource} lang="astro" />
 
 ### Groups with multiple selection
 
-<GroupsMultiple />
+<Demo><GroupsMultiple /></Demo>
 <Code code={groupsMultipleSource} lang="astro" />
 
 ### Selecting from code
@@ -101,21 +102,21 @@ Pass groups instead of options. Each group has its element, its options and an o
 `initialSelection` sets the first selection, and `select()` changes it later. `select(null)` clears it.
 Neither fires `appret-listbox-change`.
 
-<Select />
+<Demo><Select /></Demo>
 <Code code={selectSource} lang="astro" />
 
 ### Reacting to changes
 
 `appret-listbox-change` fires on the host when the user changes the selection. `event.detail` has the first selected `option` and all the selected `options`.
 
-<ChangeEvent />
+<Demo><ChangeEvent /></Demo>
 <Code code={changeEventSource} lang="astro" />
 
 ### Updating options
 
 Change the DOM first, then call `update()` with the new options. Selected options that are still there stay selected. If the focused option was removed, you are responsible for placing the focus back in the listbox with `focus()`.
 
-<Update />
+<Demo><Update /></Demo>
 <Code code={updateSource} lang="astro" />
 
 ### Inside a shadow root
@@ -123,14 +124,14 @@ Change the DOM first, then call `update()` with the new options. Selected option
 Options can be slotted from the page into a list inside your component's shadow root.
 To label the listbox from outside the shadow root, pass the element with `label: { byElements }`.
 
-<ShadowDom />
+<Demo><ShadowDom /></Demo>
 <Code code={shadowDomSource} lang="astro" />
 
 ### Cleaning up
 
 `destroy()` removes listeners and restores the original markup.
 
-<Destroy />
+<Demo><Destroy /></Demo>
 <Code code={destroySource} lang="astro" />
 
 ## Reference

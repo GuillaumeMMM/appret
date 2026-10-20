@@ -4,6 +4,7 @@ description: A listbox from HTML, with no JavaScript to write.
 ---
 
 import { Code } from "@astrojs/starlight/components";
+import Demo from "../../../components/Demo.astro";
 
 import Basic from "../../../examples/listbox-element/basic.astro";
 import basicSource from "../../../examples/listbox-element/basic.astro?raw";
@@ -18,7 +19,7 @@ import selectSource from "../../../examples/listbox-element/select.astro?raw";
 
 `<appret-listbox>` is a custom element that wraps your HTML and makes it a listbox following the [WAI-ARIA listbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/) using the [Apprêt listbox controller](/controllers/listbox/). It finds its parts in your markup from `data-appret-part` attributes. It adds no styles and no shadow DOM.
 
-<Basic />
+<Demo><Basic /></Demo>
 
 ## Usage
 
@@ -40,26 +41,26 @@ Then mark the parts of your markup:
 
 ### Attributes
 
-<Attributes />
+<Demo><Attributes /></Demo>
 <Code code={attributesSource} lang="astro" />
 
 ### Multiple selection
 
 Like `<select multiple>`, the `multiple` attribute alone turns it on.
 
-<Multiple />
+<Demo><Multiple /></Demo>
 <Code code={multipleSource} lang="astro" />
 
 ### Groups
 
 Wrap options in `listbox.group` parts. A `listbox.group-label` inside a group labels it.
 
-<Groups />
+<Demo><Groups /></Demo>
 <Code code={groupsSource} lang="astro" />
 
 ### Selecting from JavaScript
 
-<Select />
+<Demo><Select /></Demo>
 <Code code={selectSource} lang="astro" />
 
 ## Reference

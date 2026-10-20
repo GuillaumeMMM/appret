@@ -4,6 +4,7 @@ description: Accessible tabs from HTML, with no JavaScript to write.
 ---
 
 import { Code } from "@astrojs/starlight/components";
+import Demo from "../../../components/Demo.astro";
 
 import Basic from "../../../examples/tabs-element/basic.astro";
 import basicSource from "../../../examples/tabs-element/basic.astro?raw";
@@ -16,7 +17,7 @@ import dynamicSource from "../../../examples/tabs-element/dynamic.astro?raw";
 
 `<appret-tabs>` is a custom element that wraps your HTML and makes it a set of tabs following the [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/) using the [Apprêt tabs controller](/controllers/tabs/). It finds its parts in your markup from `data-appret-part` attributes. It adds no styles and no shadow DOM.
 
-<Basic />
+<Demo><Basic /></Demo>
 
 ## Usage
 
@@ -38,19 +39,19 @@ Then mark the parts of your markup:
 
 ### Attributes
 
-<Attributes />
+<Demo><Attributes /></Demo>
 <Code code={attributesSource} lang="astro" />
 
 ### Selecting from JavaScript
 
-<Select />
+<Demo><Select /></Demo>
 <Code code={selectSource} lang="astro" />
 
 ### Content loaded later
 
 Tabs can be added or removed after the element was connected to the DOM and initialized.
 
-<Dynamic />
+<Demo><Dynamic /></Demo>
 <Code code={dynamicSource} lang="astro" />
 
 ## Reference

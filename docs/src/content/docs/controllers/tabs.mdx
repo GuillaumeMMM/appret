@@ -4,6 +4,7 @@ description: Keyboard, focus and ARIA for a set of tabs, on your own markup.
 ---
 
 import { Code } from "@astrojs/starlight/components";
+import Demo from "../../../components/Demo.astro";
 
 import Basic from "../../../examples/tabs/basic.astro";
 import basicSource from "../../../examples/tabs/basic.astro?raw";
@@ -31,7 +32,7 @@ import destroySource from "../../../examples/tabs/destroy.astro?raw";
 `TabsController` turns your own markup into an accessible set of tabs, following the
 [WAI-ARIA tabs pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/).
 
-<Basic />
+<Demo><Basic /></Demo>
 
 ## Usage
 
@@ -47,31 +48,31 @@ A text `label` adds an `aria-label` attribute to the list. If the tabs must be l
 
 When the label is outside your component's shadow root where IDs can't reach, or when it has no ID, use `label: { byElements }` with a list of elements.
 
-<LabelledBy />
+<Demo><LabelledBy /></Demo>
 <Code code={labelledBySource} lang="astro" />
 
 ### Vertical tabs
 
-<Vertical />
+<Demo><Vertical /></Demo>
 <Code code={verticalSource} lang="astro" />
 
 ### Selecting with Enter or Space
 
 With `selectionFollowsFocus: false`, arrow keys move focus, and <kbd>Enter</kbd> or <kbd>Space</kbd> selects.
 
-<Manual />
+<Demo><Manual /></Demo>
 <Code code={manualSource} lang="astro" />
 
 ### Disabled tabs
 
 Tabs with `aria-disabled="true"` or `disabled` are skipped by the keyboard and can't be selected.
 
-<Disabled />
+<Demo><Disabled /></Demo>
 <Code code={disabledSource} lang="astro" />
 
 ### No wrap-around
 
-<NoLoop />
+<Demo><NoLoop /></Demo>
 <Code code={noLoopSource} lang="astro" />
 
 ### Selecting from code
@@ -79,14 +80,14 @@ Tabs with `aria-disabled="true"` or `disabled` are skipped by the keyboard and c
 `initialSelection` sets the first selection, and `select()` changes it later.
 Neither fires `appret-tabs-change`.
 
-<Select />
+<Demo><Select /></Demo>
 <Code code={selectSource} lang="astro" />
 
 ### Reacting to changes
 
 `appret-tabs-change` fires on the host when the user selects a tab.
 
-<ChangeEvent />
+<Demo><ChangeEvent /></Demo>
 <Code code={changeEventSource} lang="astro" />
 
 ### Updating tabs
@@ -94,7 +95,7 @@ Neither fires `appret-tabs-change`.
 Change the DOM first, then call `update()` with the new lists. If the focused tab was
 removed, you are responsible for placing the focus back on the selected tab with `focus()`.
 
-<Update />
+<Demo><Update /></Demo>
 <Code code={updateSource} lang="astro" />
 
 ### Inside a shadow root
@@ -102,14 +103,14 @@ removed, you are responsible for placing the focus back on the selected tab with
 Tabs can be slotted from the page while panels live in your component's shadow root.
 To label the tab list from outside the shadow root, pass the element with `label: { byElements }`.
 
-<ShadowDom />
+<Demo><ShadowDom /></Demo>
 <Code code={shadowDomSource} lang="astro" />
 
 ### Cleaning up
 
 `destroy()` removes listeners and restores the original markup.
 
-<Destroy />
+<Demo><Destroy /></Demo>
 <Code code={destroySource} lang="astro" />
 
 ## Reference

@@ -27,3 +27,15 @@
 .sl-markdown-content [role="group"] > [role="presentation"] {
   font-weight: 600;
 }
+
+.sl-markdown-content [role="listbox"][aria-orientation="horizontal"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  list-style: none;
+  padding: 0;
+}
+
+.sl-markdown-content [role="listbox"][aria-orientation="horizontal"] > [role="option"] {
+  margin: 0;
+}
