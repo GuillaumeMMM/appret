@@ -60,7 +60,6 @@ export class MenuController {
   #destroyed = false;
   #focusableItem?: NormalizedItem;
 
-
   constructor(host: HTMLElement, config: MenuControllerConfig) {
     this.host = host;
 
@@ -83,10 +82,10 @@ export class MenuController {
 
     //  After an update, the tab stop stays on its item if it's still there
     const kept = this.#items.find(
-      (i) => i.element === this.#focusableItem?.element && !this.#isDisabled(i),
+      (i) => i.element === this.#focusableItem?.element && this.#canFocus(i),
     );
     this.#setFocusableItem(
-      kept ?? this.#findEnabledItem(-1, 1) ?? this.#items[0]!,
+      kept ?? this.#findFocusableItem(-1, 1) ?? this.#items[0]!,
     );
   }
 
@@ -294,8 +293,8 @@ export class MenuController {
             return;
           }
 
-          const previousItem = this.#findEnabledItem(i, -1);
-          const nextItem = this.#findEnabledItem(i, 1);
+          const previousItem = this.#findFocusableItem(i, -1);
+          const nextItem = this.#findFocusableItem(i, 1);
           const rtl = getComputedStyle(this.#config.menu).direction === "rtl";
 
           let target;
@@ -327,11 +326,11 @@ export class MenuController {
               break;
             }
             case "Home": {
-              target = this.#findEnabledItem(-1, 1);
+              target = this.#findFocusableItem(-1, 1);
               break;
             }
             case "End": {
-              target = this.#findEnabledItem(this.#items.length, -1);
+              target = this.#findFocusableItem(this.#items.length, -1);
               break;
             }
             case "Enter":
@@ -393,7 +392,11 @@ export class MenuController {
     );
   }
 
-  #findEnabledItem(
+  #canFocus(item: NormalizedItem): boolean {
+    return !item.element.matches(":disabled");
+  }
+
+  #findFocusableItem(
     currentIndex: number,
     step: 1 | -1,
   ): NormalizedItem | undefined {
@@ -410,7 +413,7 @@ export class MenuController {
 
       const item = this.#items[index]!;
 
-      if (!this.#isDisabled(item)) {
+      if (this.#canFocus(item)) {
         return item;
       }
     }
@@ -418,7 +421,6 @@ export class MenuController {
     return undefined;
   }
 
-  //  The next item, after the current one and wrapping around, whose name starts with the character
   #findItemByText(
     key: string,
     startFromIndex: number,
@@ -434,7 +436,7 @@ export class MenuController {
         "";
 
       if (
-        !this.#isDisabled(item) &&
+        this.#canFocus(item) &&
         name.trim().toLowerCase().startsWith(character)
       ) {
         return item;
@@ -468,8 +470,11 @@ export class MenuController {
       return;
     }
 
-    if (this.#isDisabled(match)) {
-      console.warn("Appret menu: can't make a disabled item focusable:", item);
+    if (!this.#canFocus(match)) {
+      console.warn(
+        "Appret menu: a natively disabled item can't be focused:",
+        item,
+      );
       return;
     }
 
@@ -486,10 +491,23 @@ export class MenuController {
 
     this.#validateConfig(next);
 
+    const checked = new Map(
+      this.#items
+        .filter((i) => i.type !== "item")
+        .map((i) => [i.element, i.element.getAttribute("aria-checked")]),
+    );
+
     this.#teardown();
 
     this.#config = next;
     this.#setup();
+
+    for (const { element, type } of this.#items) {
+      const value = checked.get(element);
+      if (type !== "item" && value) {
+        this.#attributeRecorder.set(element, "aria-checked", value);
+      }
+    }
   }
 
   focusLast(): void {
@@ -498,7 +516,7 @@ export class MenuController {
       return;
     }
 
-    const item = this.#findEnabledItem(this.#items.length, -1);
+    const item = this.#findFocusableItem(this.#items.length, -1);
     if (item) {
       this.focus(item);
     }
@@ -510,7 +528,7 @@ export class MenuController {
       return;
     }
 
-    const item = this.#findEnabledItem(-1, 1);
+    const item = this.#findFocusableItem(-1, 1);
     if (item) {
       this.focus(item);
     }
@@ -531,8 +549,11 @@ export class MenuController {
     );
 
     if (matchItem) {
-      if (this.#isDisabled(matchItem)) {
-        console.warn("Appret menu: disabled item cannot be focused", item);
+      if (!this.#canFocus(matchItem)) {
+        console.warn(
+          "Appret menu: a natively disabled item can't be focused:",
+          item,
+        );
         return;
       }
 

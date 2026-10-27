@@ -1,0 +1,43 @@
+<div id="menu-update">
+  <p>
+    <button type="button" class="add">Add an item</button>
+    <button type="button" class="remove">Remove the last item</button>
+  </p>
+  <div class="menu">
+    <div>Item 1</div>
+    <div>Item 2</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-update")!;
+  const menu = host.querySelector<HTMLElement>(".menu")!;
+  const items = [...menu.querySelectorAll<HTMLElement>(":scope > div")];
+  let count = items.length;
+
+  const controller = new MenuController(host, {
+    menu,
+    items,
+    label: "Items",
+  });
+
+  function addItem() {
+    count++;
+    const item = document.createElement("div");
+    item.textContent = `Item ${count}`;
+    menu.append(item);
+    items.push(item);
+    controller.update({ items });
+  }
+
+  function removeLastItem() {
+    if (items.length === 1) return;
+    items.pop()!.remove();
+    controller.update({ items });
+  }
+
+  host.querySelector(".add")!.addEventListener("click", addItem);
+  host.querySelector(".remove")!.addEventListener("click", removeLastItem);
+</script>

@@ -1,0 +1,20 @@
+<div id="menu-no-loop">
+  <div class="menu">
+    <div>Copy</div>
+    <div>Cut</div>
+    <div>Paste</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-no-loop")!;
+
+  new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+    label: "Edit",
+    loop: false,
+  });
+</script>

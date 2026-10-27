@@ -142,7 +142,7 @@ To label the listbox from outside the shadow root, pass the element with `label:
 | --- | --- | --- | --- |
 | `list` | `HTMLElement` | | The options container. |
 | `options` | `HTMLElement[] \| ListboxGroup[]` | | The options, or groups of options. |
-| `label` | `string \| { byId: string } \| { byElements: Element[] }` | | A text for `aria-label`, space-separated IDs for `aria-labelledby`, or labelling elements, also outside the shadow root. |
+| `label` | `string \| { byId: string } \| { byElements: Element[] }` | | A text for `aria-label`, space-separated IDs for `aria-labelledby`, or labelling elements. |
 | `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | Which arrow keys move between options. |
 | `multiple` | `boolean` | `false` | Whether several options can be selected. |
 | `selectionFollowsFocus` | `boolean` | `false` | Whether moving focus also selects the option. Only without `multiple`. |
@@ -163,7 +163,7 @@ To label the listbox from outside the shadow root, pass the element with `label:
 | `select(option \| option[] \| null)` | Replaces the selection. `null` clears it. Doesn't move focus or fire an event. |
 | `selectedOption` | Gets the first selected option, or `null`. |
 | `selectedOptions` | Gets the selected options. |
-| `update(config)` | Applies changes to the config (for example new `options`). |
+| `update(config)` | Applies changes to the config. |
 | `focus()` | Moves focus to the option reachable with <kbd>Tab</kbd>. |
 | `destroy()` | Removes listeners and restores the original markup. |
 

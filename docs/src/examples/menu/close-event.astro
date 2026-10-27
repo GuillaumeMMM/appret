@@ -1,0 +1,25 @@
+<div id="menu-close-event">
+  <div class="menu">
+    <div>Copy</div>
+    <div>Cut</div>
+    <div>Paste</div>
+  </div>
+  <p>Close requested: <output>not yet</output></p>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-close-event")!;
+  const output = host.querySelector("output")!;
+
+  new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+    label: "Edit",
+  });
+
+  host.addEventListener("appret-menu-close", (event) => {
+    output.textContent = event.detail.reason;
+  });
+</script>

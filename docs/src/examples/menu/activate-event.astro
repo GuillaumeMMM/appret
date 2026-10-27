@@ -1,0 +1,31 @@
+<div id="menu-activate-event">
+  <div class="menu">
+    <div class="copy">Copy</div>
+    <div class="wrap">Word wrap</div>
+  </div>
+  <p>Last activated: <output>none yet</output></p>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-activate-event")!;
+  const output = host.querySelector("output")!;
+
+  new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [
+      host.querySelector<HTMLElement>(".copy")!,
+      { type: "checkbox", element: host.querySelector<HTMLElement>(".wrap")! },
+    ],
+    label: "Edit",
+  });
+
+  host.addEventListener("appret-menu-activate", (event) => {
+    const { item, checked } = event.detail;
+    output.textContent =
+      checked === undefined
+        ? `${item.textContent}`
+        : `${item.textContent} (${checked ? "checked" : "unchecked"})`;
+  });
+</script>

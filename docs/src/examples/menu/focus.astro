@@ -1,0 +1,26 @@
+<div id="menu-focus">
+  <p>
+    <button type="button" class="first">Focus the first item</button>
+    <button type="button" class="last">Focus the last item</button>
+  </p>
+  <div class="menu">
+    <div>Copy</div>
+    <div>Cut</div>
+    <div>Paste</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-focus")!;
+
+  const controller = new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+    label: "Edit",
+  });
+
+  host.querySelector(".first")!.addEventListener("click", () => controller.focusFirst());
+  host.querySelector(".last")!.addEventListener("click", () => controller.focusLast());
+</script>

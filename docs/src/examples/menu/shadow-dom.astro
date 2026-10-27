@@ -1,0 +1,35 @@
+<p id="menu-shadow-dom-heading">Share</p>
+<example-shadow-menu>
+  <div slot="item">Copy link</div>
+  <div slot="item">Email</div>
+  <div slot="item">Embed</div>
+</example-shadow-menu>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  class ExampleShadowMenu extends HTMLElement {
+    #controller?: MenuController;
+
+    connectedCallback() {
+      const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+      root.innerHTML = `<div><slot name="item"></slot></div>`;
+
+      this.#controller = new MenuController(this, {
+        menu: root.querySelector("div")!,
+        items: [...this.querySelectorAll<HTMLElement>('[slot="item"]')],
+        label: {
+          byElements: [document.getElementById("menu-shadow-dom-heading")!],
+        },
+      });
+    }
+
+    disconnectedCallback() {
+      this.#controller?.destroy();
+    }
+  }
+
+  if (!customElements.get("example-shadow-menu")) {
+    customElements.define("example-shadow-menu", ExampleShadowMenu);
+  }
+</script>

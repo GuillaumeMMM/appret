@@ -1,0 +1,20 @@
+<div id="menu-labelled-by">
+  <p id="menu-labelled-by-heading">File</p>
+  <div class="menu">
+    <div>New</div>
+    <div>Open</div>
+    <div>Save</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-labelled-by")!;
+
+  new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+    label: { byId: "menu-labelled-by-heading" },
+  });
+</script>

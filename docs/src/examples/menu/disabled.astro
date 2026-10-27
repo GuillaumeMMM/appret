@@ -1,0 +1,20 @@
+<div id="menu-disabled">
+  <div class="menu">
+    <div>Copy</div>
+    <div aria-disabled="true">Cut</div>
+    <div>Paste</div>
+    <div>Delete</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-disabled")!;
+
+  new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+    label: "Edit",
+  });
+</script>

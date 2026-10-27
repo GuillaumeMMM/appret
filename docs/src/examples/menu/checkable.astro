@@ -1,0 +1,41 @@
+<div id="menu-checkable">
+  <div class="menu">
+    <div class="zoom">Zoom to fit</div>
+    <hr />
+    <div class="ruler" aria-checked="true">Show ruler</div>
+    <div class="wrap">Word wrap</div>
+    <hr />
+    <div class="sort">
+      <p class="label">Sort by</p>
+      <div aria-checked="true">Name</div>
+      <div>Date</div>
+      <div>Size</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-checkable")!;
+  const get = (selector: string) => host.querySelector<HTMLElement>(selector)!;
+
+  new MenuController(host, {
+    menu: get(".menu"),
+    label: "View",
+    items: [
+      get(".zoom"),
+      { type: "checkbox", element: get(".ruler") },
+      { type: "checkbox", element: get(".wrap") },
+      {
+        group: get(".sort"),
+        label: { byElements: [get(".label")] },
+        items: [...get(".sort").querySelectorAll<HTMLElement>(":scope > div")].map((element) => ({
+          type: "radio" as const,
+          element,
+        })),
+      },
+    ],
+    separators: [...host.querySelectorAll<HTMLElement>("hr")],
+  });
+</script>

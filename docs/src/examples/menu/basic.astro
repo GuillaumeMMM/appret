@@ -1,10 +1,10 @@
 <div id="menu-basic">
   <div class="menu">
-    <div>Item 1</div>
-    <div>Item 2</div>
+    <div>Copy</div>
+    <div>Cut</div>
+    <div>Paste</div>
     <hr />
-    <div>Item 3</div>
-    <div>Item 4</div>
+    <div>Delete</div>
   </div>
 </div>
 
@@ -17,6 +17,6 @@
     menu: host.querySelector(".menu")!,
     items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
     separators: [...host.querySelectorAll<HTMLElement>("hr")],
-    label: "Account",
+    label: "Edit",
   });
 </script>

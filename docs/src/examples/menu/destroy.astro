@@ -1,0 +1,36 @@
+<div id="menu-destroy">
+  <p><button type="button" class="toggle">Destroy</button></p>
+  <div class="menu">
+    <div>Copy</div>
+    <div>Cut</div>
+    <div>Paste</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-destroy")!;
+  const toggle = host.querySelector<HTMLElement>(".toggle")!;
+
+  function setUp() {
+    return new MenuController(host, {
+      menu: host.querySelector(".menu")!,
+      items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+      label: "Edit",
+    });
+  }
+
+  let controller: MenuController | undefined = setUp();
+
+  toggle.addEventListener("click", () => {
+    if (controller) {
+      controller.destroy();
+      controller = undefined;
+      toggle.textContent = "Set up again";
+    } else {
+      controller = setUp();
+      toggle.textContent = "Destroy";
+    }
+  });
+</script>

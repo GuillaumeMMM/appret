@@ -1,14 +1,209 @@
 ---
 title: Menu
 description: Keyboard, focus and ARIA for a menu, on your own markup.
+draft: true
 ---
 
 import { Code } from "@astrojs/starlight/components";
 import Demo from "../../../components/Demo.astro";
 
 import Basic from "../../../examples/menu/basic.astro";
+import basicSource from "../../../examples/menu/basic.astro?raw";
+import LabelledBy from "../../../examples/menu/labelled-by.astro";
+import labelledBySource from "../../../examples/menu/labelled-by.astro?raw";
+import Checkable from "../../../examples/menu/checkable.astro";
+import checkableSource from "../../../examples/menu/checkable.astro?raw";
+import Horizontal from "../../../examples/menu/horizontal.astro";
+import horizontalSource from "../../../examples/menu/horizontal.astro?raw";
+import Disabled from "../../../examples/menu/disabled.astro";
+import disabledSource from "../../../examples/menu/disabled.astro?raw";
+import NoLoop from "../../../examples/menu/no-loop.astro";
+import noLoopSource from "../../../examples/menu/no-loop.astro?raw";
+import ActivateEvent from "../../../examples/menu/activate-event.astro";
+import activateEventSource from "../../../examples/menu/activate-event.astro?raw";
+import CloseEvent from "../../../examples/menu/close-event.astro";
+import closeEventSource from "../../../examples/menu/close-event.astro?raw";
+import Focus from "../../../examples/menu/focus.astro";
+import focusSource from "../../../examples/menu/focus.astro?raw";
+import Update from "../../../examples/menu/update.astro";
+import updateSource from "../../../examples/menu/update.astro?raw";
+import ShadowDom from "../../../examples/menu/shadow-dom.astro";
+import shadowDomSource from "../../../examples/menu/shadow-dom.astro?raw";
+import Destroy from "../../../examples/menu/destroy.astro";
+import destroySource from "../../../examples/menu/destroy.astro?raw";
 
-`MenuController` turns your own markup into an accessible menu, following the
+`MenuController` turns your own markup into a menu, following the
 [WAI-ARIA menu pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/).
 
+:::caution
+`MenuController` handles the menu itself, not the button that opens it. If that's what you need, you're looking for the [menu button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/).
+:::
+
 <Demo><Basic /></Demo>
+
+## Usage
+
+Pass a host element, the menu, its items, and its eventual separators.
+
+<Code code={basicSource} lang="astro" />
+
+## Examples
+
+### Labelling
+
+A text `label` adds an `aria-label` attribute to the menu. If the menu must be labelled by an existing text somewhere else on the page, like the button that opens it, use `label: { byId }` with the ID or IDs of a visible label.
+
+When the label is outside your component's shadow root where IDs can't reach, or when it has no ID, use `label: { byElements }` with a list of elements.
+
+<Demo><LabelledBy /></Demo>
+<Code code={labelledBySource} lang="astro" />
+
+### Checkbox and radio items
+
+Items can be `checkbox` or `radio` items, which keep an `aria-checked` state. <kbd>Space</kbd> toggles a checkbox item, or checks a radio item without closing the menu. Radio items outside groups automatically form one set.
+
+A group has its element, its items and an optional label.
+
+<Demo><Checkable /></Demo>
+<Code code={checkableSource} lang="astro" />
+
+### Horizontal menu
+
+With `orientation: "horizontal"`, <kbd>Left Arrow</kbd> and <kbd>Right Arrow</kbd> move between items instead of <kbd>Up Arrow</kbd> and <kbd>Down Arrow</kbd>.
+
+<Demo><Horizontal /></Demo>
+<Code code={horizontalSource} lang="astro" />
+
+### Disabled items
+
+`aria-disabled="true"` on a group or on the menu disables all of its items.
+
+<Demo><Disabled /></Demo>
+<Code code={disabledSource} lang="astro" />
+
+### No wrap-around
+
+<Demo><NoLoop /></Demo>
+<Code code={noLoopSource} lang="astro" />
+
+### Reacting to activation
+
+`appret-menu-activate` fires on the host when the user activates an item with <kbd>Enter</kbd>, <kbd>Space</kbd> or a click. `event.detail` has the `item`, and its `checked` state for checkbox and radio items.
+
+<Demo><ActivateEvent /></Demo>
+<Code code={activateEventSource} lang="astro" />
+
+### Closing the menu
+
+`appret-menu-close` fires on the host when the menu should close: on <kbd>Escape</kbd>, on <kbd>Tab</kbd>, and after an item is activated, except with <kbd>Space</kbd> on checkbox and radio items.
+
+<Demo><CloseEvent /></Demo>
+<Code code={closeEventSource} lang="astro" />
+
+### Moving focus into the menu
+
+`focusFirst()` and `focusLast()` move focus to the first or last item.
+
+<Demo><Focus /></Demo>
+<Code code={focusSource} lang="astro" />
+
+### Updating items
+
+Change the DOM first, then call `update()` with the new items.
+
+<Demo><Update /></Demo>
+<Code code={updateSource} lang="astro" />
+
+### Inside a shadow root
+
+Items can be slotted from the page into a menu inside your component's shadow root.
+To label the menu from outside the shadow root, pass the element with `label: { byElements }`.
+
+<Demo><ShadowDom /></Demo>
+<Code code={shadowDomSource} lang="astro" />
+
+### Cleaning up
+
+`destroy()` removes listeners and restores the original markup.
+
+<Demo><Destroy /></Demo>
+<Code code={destroySource} lang="astro" />
+
+## Reference
+
+### Config
+
+| Property | Type | Default | |
+| --- | --- | --- | --- |
+| `menu` | `HTMLElement` | | The items container. |
+| `items` | `(MenuItem \| { group, items, label? })[]` | | The items, and groups of items. |
+| `separators` | `HTMLElement[]` | | Separators between items. |
+| `label` | `string \| { byId: string } \| { byElements: Element[] }` | | A text for `aria-label`, space-separated IDs for `aria-labelledby`, or labelling elements. |
+| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | Which arrow keys move between items. |
+| `loop` | `boolean` | `true` | Whether keyboard navigation wraps around at the ends. |
+
+### MenuItem
+
+An `HTMLElement` for a plain item, or an object:
+
+| Property | Type | |
+| --- | --- | --- |
+| `type` | `"item" \| "checkbox" \| "radio"` | The kind of item. |
+| `element` | `HTMLElement` | The item. |
+
+### Methods and properties
+
+| | |
+| --- | --- |
+| `focus(item?)` | Moves focus to the item reachable with <kbd>Tab</kbd>, or to the given item. |
+| `focusFirst()` | Moves focus to the first item. |
+| `focusLast()` | Moves focus to the last item. |
+| `setFocusable(item)` | Makes an item reachable with <kbd>Tab</kbd>, without moving focus. |
+| `update(config)` | Applies changes to the config. |
+| `destroy()` | Removes listeners and restores the original markup. |
+
+### Events
+
+| | |
+| --- | --- |
+| `appret-menu-activate` | The user activated an item. |
+| `appret-menu-close` | The menu should close. |
+
+## WAI-ARIA pattern
+
+Requirements of the [WAI-ARIA menu and menubar pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/). The controller covers menus. Menubars and submenus aren't supported yet.
+
+### Roles, states and properties
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| The container has role `menu`. | <span role="img" aria-label="Implemented">✅</span> | |
+| The container has role `menubar` for a menubar. | <span role="img" aria-label="Not supported yet">❌</span> | Menubars aren't supported yet. |
+| Items have role `menuitem`, `menuitemcheckbox` or `menuitemradio`. | <span role="img" aria-label="Implemented">✅</span> | |
+| Checked items have `aria-checked="true"`. | <span role="img" aria-label="Implemented">✅</span> | |
+| Disabled items have `aria-disabled="true"`. | <span role="img" aria-label="Left to the author">❌</span> | Set it in your markup. |
+| Separators have role `separator`, with a consistent `aria-orientation`. | <span role="img" aria-label="Implemented">✅</span> | |
+| Groups of radio items are delimited by separators or a group. | <span role="img" aria-label="Implemented">✅</span> | |
+| The menu is labelled by the element that opens it, or with `aria-label`. | <span role="img" aria-label="Implemented">✅</span> | |
+| `aria-orientation="horizontal"` for a horizontal menu. | <span role="img" aria-label="Implemented">✅</span> | |
+| Focus moves with DOM focus or `aria-activedescendant`. | <span role="img" aria-label="Implemented">✅</span> | The controller moves DOM focus. |
+| A parent `menuitem` has `aria-haspopup` and `aria-expanded`. | <span role="img" aria-label="Not supported yet">❌</span> | Submenus aren't supported yet. |
+
+### Keyboard interaction
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Opening a menu moves focus to its first item. | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Tab</kbd> and <kbd>Shift</kbd> + <kbd>Tab</kbd> move focus out and close the menu. | <span role="img" aria-label="Implemented">✅</span> | Fires `appret-menu-close`. |
+| <kbd>Enter</kbd> activates the item and closes the menu. | <span role="img" aria-label="Implemented">✅</span> | Fires `appret-menu-activate`, then `appret-menu-close`. |
+| <kbd>Space</kbd> toggles a checkbox item without closing the menu. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Space</kbd> checks a radio item and unchecks the others in its group, without closing the menu. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Space</kbd> activates a `menuitem` and closes the menu. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Down Arrow</kbd> / <kbd>Up Arrow</kbd> move focus to the next / previous item, optionally wrapping. | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Right Arrow</kbd> / <kbd>Left Arrow</kbd> move focus in a horizontal menu. | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Home</kbd> / <kbd>End</kbd> move focus to the first / last item. | <span role="img" aria-label="Implemented">✅</span> | |
+| Typing a character moves focus to the next item starting with it. (Optional) | <span role="img" aria-label="Implemented">✅</span> | |
+| <kbd>Escape</kbd> closes the menu and returns focus to where it was opened from. | <span role="img" aria-label="Implemented">✅</span> | Fires `appret-menu-close`. Returning focus is up to whoever opened the menu. |
+| Disabled items are focusable but can't be activated. | <span role="img" aria-label="Implemented">✅</span> | |
+| Separators aren't focusable. | <span role="img" aria-label="Implemented">✅</span> | |
+| Arrow keys open and close submenus. | <span role="img" aria-label="Not supported yet">❌</span> | Submenus aren't supported yet. |

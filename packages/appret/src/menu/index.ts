@@ -1,6 +1,7 @@
 export { MenuController } from "./controller.js";
 export type {
   MenuControllerConfig,
+  MenuItem,
   MenuActivateDetail,
   MenuActivateEvent,
   MenuCloseEvent,

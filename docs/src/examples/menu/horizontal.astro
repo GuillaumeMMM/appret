@@ -1,0 +1,20 @@
+<div id="menu-horizontal">
+  <div class="menu">
+    <div>Bold</div>
+    <div>Italic</div>
+    <div>Underline</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-horizontal")!;
+
+  new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+    label: "Format",
+    orientation: "horizontal",
+  });
+</script>

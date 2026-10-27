@@ -122,7 +122,7 @@ To label the tab list from outside the shadow root, pass the element with `label
 | `list` | `HTMLElement` | | The tabs container. |
 | `tabs` | `HTMLElement[]` | | The tabs. |
 | `panels` | `HTMLElement[]` | | One panel per tab in the same order. |
-| `label` | `string \| { byId: string } \| { byElements: Element[] }` | | A text for `aria-label`, space-separated IDs for `aria-labelledby`, or labelling elements, also outside the shadow root. |
+| `label` | `string \| { byId: string } \| { byElements: Element[] }` | | A text for `aria-label`, space-separated IDs for `aria-labelledby`, or labelling elements. |
 | `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | Which arrow keys move between tabs. |
 | `selectionFollowsFocus` | `boolean` | `true` | Whether moving focus also selects the tab and opens the panel. |
 | `loop` | `boolean` | `true` | Whether keyboard navigation wrap around at the ends. |
@@ -135,7 +135,7 @@ To label the tab list from outside the shadow root, pass the element with `label
 | `select(tab \| index)` | Selects a tab. Doesn't move focus or fire an event. |
 | `selectedTab` | Gets the selected tab. |
 | `selectedIndex` | Gets the selected tab index in `tabs`. |
-| `update(config)` | Applies changes to the config (for example new `tabs` and `panels`). |
+| `update(config)` | Applies changes to the config. |
 | `focus()` | Moves focus to the selected tab. |
 | `destroy()` | Removes listeners and restores the original markup. |
 
