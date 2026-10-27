@@ -2,6 +2,7 @@ import { AttributeRecorder } from "../shared/attributeRecorder.js";
 import { copyLists } from "../shared/copyLists.js";
 import { triggerCustomEvent } from "../shared/customEvents.js";
 import { setLabel, type Label } from "../shared/label.js";
+import { isOpeningInNewTab } from "../shared/links.js";
 import { flatTreeContains } from "../shared/tree.js";
 
 export type TabsControllerConfig = {
@@ -208,7 +209,7 @@ export class TabsController {
       tab.addEventListener(
         "click",
         (e) => {
-          if (e.defaultPrevented) {
+          if (e.defaultPrevented || isOpeningInNewTab(e)) {
             return;
           }
 

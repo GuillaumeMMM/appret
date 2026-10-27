@@ -661,6 +661,96 @@ describe("activation", () => {
   });
 });
 
+describe("link items", () => {
+  function setupLinks({ disabled = false } = {}) {
+    const host = document.createElement("div");
+    host.innerHTML = `
+      <div class="menu">
+        <a href="#profile">Profile</a>
+        <a href="#settings"${disabled ? ' aria-disabled="true"' : ""}>Settings</a>
+      </div>`;
+    document.body.append(host);
+    const links = [...host.querySelectorAll("a")];
+    controllers.push(
+      new MenuController(host, {
+        menu: host.querySelector<HTMLElement>(".menu")!,
+        items: links,
+        label: "Account",
+      }),
+    );
+    const clicks: HTMLElement[] = [];
+    for (const link of links) {
+      link.addEventListener("click", () => clicks.push(link));
+    }
+    return { host, links, clicks };
+  }
+
+  it("Enter follows the link with a click, which activates it once", () => {
+    const { host, links, clicks } = setupLinks();
+    const { activations, closes } = listen(host);
+    links[1]!.focus();
+    press("Enter");
+    expect(clicks).toEqual([links[1]]);
+    expect(activations).toEqual([{ item: links[1], checked: undefined }]);
+    expect(closes).toEqual([{ reason: "activate" }]);
+  });
+
+  it("Space follows the link with a click too", () => {
+    const { host, links, clicks } = setupLinks();
+    const { activations } = listen(host);
+    links[0]!.focus();
+    const event = press(" ");
+    expect(clicks).toEqual([links[0]]);
+    expect(activations).toHaveLength(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("a click activates the link item without preventing the navigation", () => {
+    const { host, links } = setupLinks();
+    const { activations } = listen(host);
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    links[0]!.dispatchEvent(event);
+    expect(activations).toHaveLength(1);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it.each([["metaKey"], ["ctrlKey"], ["shiftKey"]])(
+    "ignores a click with %s, which opens the link elsewhere",
+    (modifier) => {
+      const { host, links } = setupLinks();
+      const { activations, closes } = listen(host);
+      links[0]!.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, [modifier]: true }),
+      );
+      expect(activations).toEqual([]);
+      expect(closes).toEqual([]);
+    },
+  );
+
+  it("doesn't follow a disabled link", () => {
+    const { host, links, clicks } = setupLinks({ disabled: true });
+    const { activations } = listen(host);
+    links[1]!.focus();
+    press("Enter");
+    expect(clicks).toEqual([]);
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    links[1]!.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(activations).toEqual([]);
+  });
+
+  it("still activates other items with Enter as before", () => {
+    const { elements, host } = setup();
+    const clicks: unknown[] = [];
+    elements[0]!.addEventListener("click", () => clicks.push(1));
+    const { activations } = listen(host);
+    elements[0]!.focus();
+    press("Enter");
+    expect(clicks).toEqual([]);
+    expect(activations).toHaveLength(1);
+  });
+});
+
 describe("closing", () => {
   it("Escape asks to close the menu", () => {
     const { elements, host } = setup();

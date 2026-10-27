@@ -2,6 +2,7 @@ import { AttributeRecorder } from "../shared/attributeRecorder.js";
 import { copyLists } from "../shared/copyLists.js";
 import { triggerCustomEvent } from "../shared/customEvents.js";
 import { setLabel, type Label } from "../shared/label.js";
+import { isLink, isOpeningInNewTab } from "../shared/links.js";
 import { flatTreeContains } from "../shared/tree.js";
 
 type ItemType = "item" | "checkbox" | "radio";
@@ -273,7 +274,12 @@ export class MenuController {
       item.element.addEventListener(
         "click",
         (e: MouseEvent) => {
-          if (e.defaultPrevented) {
+          if (e.defaultPrevented || isOpeningInNewTab(e)) {
+            return;
+          }
+
+          if (this.#isDisabled(item) && isLink(item.element)) {
+            e.preventDefault();
             return;
           }
 
@@ -336,6 +342,14 @@ export class MenuController {
             case "Enter":
             case " ": {
               e.preventDefault();
+
+              if (isLink(item.element)) {
+                if (!this.#isDisabled(item)) {
+                  item.element.click();
+                }
+                break;
+              }
+
               this.#activateItem(item, {
                 close: e.key === "Enter" || item.type === "item",
               });

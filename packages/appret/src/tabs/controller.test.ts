@@ -368,6 +368,52 @@ describe("keyboard: selection doesn't follow focus", () => {
 // Behaviours beyond the APG pattern
 // ---------------------------------------------------------------------------
 
+describe("link tabs", () => {
+  function setupLinkTabs() {
+    const host = document.createElement("div");
+    host.innerHTML = `
+      <div class="list"><a href="#one">One</a><a href="#two">Two</a></div>
+      <section>One</section><section>Two</section>`;
+    document.body.append(host);
+    const tabs = [...host.querySelectorAll<HTMLElement>("a")];
+    const panels = [...host.querySelectorAll<HTMLElement>("section")];
+    controllers.push(
+      new TabsController(host, {
+        list: host.querySelector<HTMLElement>(".list")!,
+        tabs,
+        panels,
+        label: "Sections",
+      }),
+    );
+    return { tabs, panels };
+  }
+
+  it("selects a link tab on a plain click", () => {
+    const { tabs, panels } = setupLinkTabs();
+    tabs[1]!.click();
+    expectSelected(tabs, panels, 1);
+  });
+
+  it.each([["metaKey"], ["ctrlKey"], ["shiftKey"]])(
+    "doesn't select a link tab on a click with %s, which opens it elsewhere",
+    (modifier) => {
+      const { tabs, panels } = setupLinkTabs();
+      tabs[1]!.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, [modifier]: true }),
+      );
+      expectSelected(tabs, panels, 0);
+    },
+  );
+
+  it("still selects a button tab on a click with a modifier", () => {
+    const { tabs, panels } = setup();
+    tabs[1]!.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true }),
+    );
+    expectSelected(tabs, panels, 1);
+  });
+});
+
 describe("disabled tabs", () => {
   it("Right Arrow skips an aria-disabled tab", () => {
     const { tabs, panels } = setup({ disabled: [1] });
