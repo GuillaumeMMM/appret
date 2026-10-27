@@ -1,0 +1,22 @@
+<div id="menu-basic">
+  <div class="menu">
+    <div>Item 1</div>
+    <div>Item 2</div>
+    <hr />
+    <div>Item 3</div>
+    <div>Item 4</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+
+  const host = document.querySelector<HTMLElement>("#menu-basic")!;
+
+  new MenuController(host, {
+    menu: host.querySelector(".menu")!,
+    items: [...host.querySelectorAll<HTMLElement>(".menu > div")],
+    separators: [...host.querySelectorAll<HTMLElement>("hr")],
+    label: "Account",
+  });
+</script>

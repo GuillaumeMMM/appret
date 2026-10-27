@@ -7,11 +7,13 @@ export function triggerCustomEvent<K extends AppretEventType>(
   host: HTMLElement,
   type: K,
   detail: EventDetail<K>,
+  options?: { cancelable: boolean },
 ): void {
   host.dispatchEvent(
     new CustomEvent(type, {
       bubbles: true,
       detail,
+      cancelable: options?.cancelable,
     }),
   );
 }

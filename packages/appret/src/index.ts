@@ -13,3 +13,11 @@ export type {
   ListboxChangeEvent,
 } from "./listbox/controller.js";
 export { ListboxElement } from "./listbox/element.js";
+export { MenuController } from "./menu/controller.js";
+export type {
+  MenuControllerConfig,
+  MenuActivateDetail,
+  MenuActivateEvent,
+  MenuCloseEvent,
+  MenuCloseDetail,
+} from "./menu/controller.js";

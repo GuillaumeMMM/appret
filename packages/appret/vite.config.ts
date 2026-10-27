@@ -4,6 +4,7 @@ const entries = {
   index: "src/index.ts",
   "tabs/index": "src/tabs/index.ts",
   "listbox/index": "src/listbox/index.ts",
+  "menu/index": "src/menu/index.ts",
   "define/tabs": "src/define/tabs.ts",
   "define/listbox": "src/define/listbox.ts",
 };

@@ -25,6 +25,11 @@
       "types": "./dist/listbox/index.d.ts",
       "default": "./dist/listbox/index.js"
     },
+    "./menu": {
+      "appret:source": "./src/menu/index.ts",
+      "types": "./dist/menu/index.d.ts",
+      "default": "./dist/menu/index.js"
+    },
     "./define/tabs": {
       "appret:source": "./src/define/tabs.ts",
       "types": "./dist/define/tabs.d.ts",
