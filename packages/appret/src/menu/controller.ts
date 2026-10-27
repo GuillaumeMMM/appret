@@ -60,6 +60,7 @@ export class MenuController {
   #destroyed = false;
   #focusableItem?: NormalizedItem;
 
+
   constructor(host: HTMLElement, config: MenuControllerConfig) {
     this.host = host;
 
@@ -364,6 +365,12 @@ export class MenuController {
               );
               break;
             }
+            default: {
+              //  Space is left out: it activates the focused item
+              if (e.key.length === 1 && e.key !== " ") {
+                target = this.#findItemByText(e.key, i);
+              }
+            }
           }
 
           if (target) {
@@ -404,6 +411,32 @@ export class MenuController {
       const item = this.#items[index]!;
 
       if (!this.#isDisabled(item)) {
+        return item;
+      }
+    }
+
+    return undefined;
+  }
+
+  //  The next item, after the current one and wrapping around, whose name starts with the character
+  #findItemByText(
+    key: string,
+    startFromIndex: number,
+  ): NormalizedItem | undefined {
+    const character = key.toLowerCase();
+
+    for (let i = 1; i <= this.#items.length; i++) {
+      const item = this.#items[(startFromIndex + i) % this.#items.length]!;
+      //  Matches the item's name: its aria-label, or its text
+      const name =
+        item.element.getAttribute("aria-label") ??
+        item.element.textContent ??
+        "";
+
+      if (
+        !this.#isDisabled(item) &&
+        name.trim().toLowerCase().startsWith(character)
+      ) {
         return item;
       }
     }
