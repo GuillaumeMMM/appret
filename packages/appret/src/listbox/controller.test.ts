@@ -1144,22 +1144,30 @@ describe("errors and warnings", () => {
     ).toThrow("`list` is required");
   });
 
-  it("throws when there are no options", () => {
-    expect(() => setup({ texts: [] })).toThrow("no options found");
+  it("accepts no options and keeps the list reachable with Tab", () => {
+    const { list } = setup({ texts: [] });
+    expect(list.getAttribute("role")).toBe("listbox");
+    expect(list.getAttribute("tabindex")).toBe("0");
+    expect(warn).not.toHaveBeenCalled();
   });
 
-  it("throws when the groups have no options", () => {
+  it("accepts groups with no options, with a warning about the empty groups", () => {
     const list = document.createElement("div");
     const group = document.createElement("ul");
     list.append(group);
-    expect(
-      () =>
-        new ListboxController(list, {
-          list,
-          label: "Empty",
-          options: [{ group, options: [] }],
-        }),
-    ).toThrow("no options found");
+    document.body.append(list);
+    controllers.push(
+      new ListboxController(list, {
+        list,
+        label: "Empty",
+        options: [{ group, options: [], label: "Nothing" }],
+      }),
+    );
+    expect(list.getAttribute("tabindex")).toBe("0");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("invalid groups"),
+      [group],
+    );
   });
 
   it("throws when options mixes options and groups", () => {
@@ -1179,10 +1187,18 @@ describe("errors and warnings", () => {
   });
 
   it("changes nothing in the markup when it throws", () => {
-    const list = document.createElement("ul");
+    const list = document.createElement("div");
+    const option = document.createElement("div");
+    const group = document.createElement("ul");
+    list.append(option, group);
     const html = list.outerHTML;
     expect(
-      () => new ListboxController(list, { list, options: [], label: "None" }),
+      () =>
+        new ListboxController(list, {
+          list,
+          options: [option, { group, options: [] }],
+          label: "None",
+        } as unknown as ListboxControllerConfig),
     ).toThrow();
     expect(list.outerHTML).toBe(html);
   });
@@ -1822,12 +1838,52 @@ describe("update()", () => {
     });
   });
 
+  describe("empty lists", () => {
+    it("can be emptied, with the list reachable with Tab", () => {
+      const { list, items, controller } = setup({ selectedIndex: 1 });
+      controller.update({ options: [] });
+      expect(list.getAttribute("tabindex")).toBe("0");
+      expect(controller.selectedOptions).toEqual([]);
+      for (const item of items) {
+        expect(item.hasAttribute("role")).toBe(false);
+      }
+    });
+
+    it("can be refilled, with the tab stop back on an option", () => {
+      const { list, items, controller } = setup();
+      controller.update({ options: [] });
+      controller.update({ options: items });
+      expect(list.hasAttribute("tabindex")).toBe(false);
+      expect(tabStops(items)).toEqual([0]);
+    });
+
+    it("focus() does nothing when there are no options", () => {
+      const { controller } = setup({ texts: [] });
+      expect(() => controller.focus()).not.toThrow();
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it("keeps working when focus leaves an emptied listbox", () => {
+      const { list, items, controller } = setup();
+      items[0]!.focus();
+      controller.update({ options: [] });
+      const outside = document.createElement("button");
+      document.body.append(outside);
+      outside.focus();
+      expect(list.getAttribute("tabindex")).toBe("0");
+    });
+  });
+
   describe("invalid updates", () => {
     it("throw and leave the listbox working", () => {
-      const { items, controller } = setup({ selectedIndex: 1 });
-      expect(() => controller.update({ options: [] })).toThrow(
-        "no options found",
-      );
+      const { list, items, controller } = setup({ selectedIndex: 1 });
+      const group = document.createElement("ul");
+      list.append(group);
+      expect(() =>
+        controller.update({
+          options: [items[0]!, { group, options: [] }],
+        } as unknown as Partial<ListboxControllerConfig>),
+      ).toThrow("not both");
       expect(selected(items)).toEqual([1]);
       items[0]!.focus();
       press("ArrowDown");

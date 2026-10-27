@@ -102,7 +102,7 @@ export class ListboxController {
       keptActiveOption ??
         this.#selected[0] ??
         this.#findNonDisabledOption(-1, 1) ??
-        flatOptions[0]!,
+        flatOptions[0],
     );
   }
 
@@ -125,10 +125,6 @@ export class ListboxController {
       groupCount > 0
         ? groups.flatMap((g) => g.options ?? [])
         : ((options ?? []) as HTMLElement[]);
-
-    if (flatOptions.length === 0) {
-      throw new Error("Appret listbox: no options found.");
-    }
 
     const invalidGroups = groups.filter(
       (g) => !g.group || !g.options?.length || !flatTreeContains(list, g.group),
@@ -265,7 +261,7 @@ export class ListboxController {
         this.#setActiveOption(
           this.#selected[0] ??
             this.#findNonDisabledOption(-1, 1) ??
-            flatOptions[0]!,
+            flatOptions[0],
         );
       },
       { signal: this.#abort.signal },
@@ -528,7 +524,14 @@ export class ListboxController {
     ]);
   }
 
-  #setActiveOption(optionToActivate: HTMLElement) {
+  #setActiveOption(optionToActivate: HTMLElement | undefined) {
+    //  With no options, the list itself stays reachable with Tab
+    if (!optionToActivate) {
+      this.#attributeRecorder.set(this.#config.list, "tabindex", "0");
+      this.#activeOption = null;
+      return;
+    }
+
     for (const option of this.#getFlatOptions()) {
       this.#attributeRecorder.set(
         option,

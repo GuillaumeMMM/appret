@@ -982,9 +982,14 @@ describe("update()", () => {
     expect(focused(elements)).toBe(1);
   });
 
-  it("throws on an invalid update and leaves the menu working", () => {
+  it("can be emptied and refilled", () => {
     const { elements, controller } = setup();
-    expect(() => controller.update({ items: [] })).toThrow("no items found");
+    controller.update({ items: [] });
+    for (const element of elements) {
+      expect(element.hasAttribute("role")).toBe(false);
+    }
+    controller.update({ items: elements });
+    expect(tabStops(elements)).toEqual([0]);
     elements[0]!.focus();
     press("ArrowDown");
     expect(focused(elements)).toBe(1);
@@ -1000,17 +1005,14 @@ describe("update()", () => {
 });
 
 describe("errors and warnings", () => {
-  it("throws when there are no items", () => {
-    expect(() => setup({ texts: [] })).toThrow("no items found");
-  });
-
-  it("changes nothing in the markup when it throws", () => {
-    const menu = document.createElement("div");
-    const html = menu.outerHTML;
-    expect(
-      () => new MenuController(menu, { menu, items: [], label: "Empty" }),
-    ).toThrow();
-    expect(menu.outerHTML).toBe(html);
+  it("accepts no items", () => {
+    const { menu, controller } = setup({ texts: [] });
+    expect(menu.getAttribute("role")).toBe("menu");
+    controller.focus();
+    controller.focusFirst();
+    controller.focusLast();
+    expect(document.activeElement).toBe(document.body);
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it("warns about items that aren't inside the menu", () => {

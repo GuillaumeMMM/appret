@@ -163,13 +163,24 @@ describe("setup", () => {
     expect(uncaught).toEqual([]);
   });
 
-  it("waits for its options", async () => {
+  it("sets up with no options, and manages the options added later", async () => {
     const element = mount(markup([]));
-    expect(parts(element).list.hasAttribute("role")).toBe(false);
-
-    addOption(element, "Apple");
-    await flush();
     expect(parts(element).list.getAttribute("role")).toBe("listbox");
+    expect(parts(element).list.getAttribute("tabindex")).toBe("0");
+
+    const option = addOption(element, "Apple");
+    await flush();
+    expect(option.getAttribute("role")).toBe("option");
+    expect(parts(element).list.hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("follows a list that's emptied", async () => {
+    const element = mount();
+    const { options } = parts(element);
+    for (const option of options) option.remove();
+    await flush();
+    expect(parts(element).list.getAttribute("tabindex")).toBe("0");
+    expect(options[0]!.hasAttribute("role")).toBe(false);
   });
 
   it("only manages its own parts when listboxes are nested", () => {

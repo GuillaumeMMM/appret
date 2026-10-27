@@ -89,7 +89,7 @@ export class ListboxElement extends HTMLElementBase {
 
     const parts = this.#getParts();
 
-    if (!parts.list || parts.options.length === 0) {
+    if (!parts.list) {
       return;
     }
 
@@ -134,7 +134,7 @@ export class ListboxElement extends HTMLElementBase {
     const parts = this.#getParts();
 
     //  There is a format issue or the parts will be injected later
-    if (!parts.list || parts.options.length === 0) {
+    if (!parts.list) {
       return;
     }
 

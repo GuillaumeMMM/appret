@@ -85,9 +85,13 @@ export class MenuController {
     const kept = this.#items.find(
       (i) => i.element === this.#focusableItem?.element && this.#canFocus(i),
     );
-    this.#setFocusableItem(
-      kept ?? this.#findFocusableItem(-1, 1) ?? this.#items[0]!,
-    );
+
+    const focusable = kept ?? this.#findFocusableItem(-1, 1) ?? this.#items[0];
+    if (focusable) {
+      this.#setFocusableItem(focusable);
+    } else {
+      this.#focusableItem = undefined;
+    }
   }
 
   #areMenuItemsEqual(item1: NormalizedItem, item2: NormalizedItem) {
@@ -98,10 +102,6 @@ export class MenuController {
     const { menu } = newConfig;
 
     const items = normalizeItems(newConfig.items);
-
-    if (items.length === 0) {
-      throw new Error("Appret menu: no items found.");
-    }
 
     const outside = items.filter(
       (item) => !flatTreeContains(menu, item.element),
