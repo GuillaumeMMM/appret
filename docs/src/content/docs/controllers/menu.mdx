@@ -1,7 +1,6 @@
 ---
 title: Menu
 description: Keyboard, focus and ARIA for a menu, on your own markup.
-draft: true
 ---
 
 import { Code } from "@astrojs/starlight/components";
@@ -35,7 +34,7 @@ import destroySource from "../../../examples/menu/destroy.astro?raw";
 `MenuController` turns your own markup into a menu, following the
 [WAI-ARIA menu pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/).
 
-:::caution
+:::note
 `MenuController` handles the menu itself, not the button that opens it. If that's what you need, you're looking for the [menu button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/).
 :::
 
@@ -161,13 +160,6 @@ An `HTMLElement` for a plain item, or an object:
 | `setFocusable(item)` | Makes an item reachable with <kbd>Tab</kbd>, without moving focus. |
 | `update(config)` | Applies changes to the config. |
 | `destroy()` | Removes listeners and restores the original markup. |
-
-### Events
-
-| | |
-| --- | --- |
-| `appret-menu-activate` | The user activated an item. |
-| `appret-menu-close` | The menu should close. |
 
 ## WAI-ARIA pattern
 

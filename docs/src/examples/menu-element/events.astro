@@ -1,0 +1,38 @@
+<p>
+  <button type="button" id="menu-events-first">Focus the first item</button>
+  <button type="button" id="menu-events-last">Focus the last item</button>
+</p>
+<appret-menu id="menu-events" label="Edit">
+  <div data-appret-part="menu.menu">
+    <div data-appret-part="menu.item">Copy</div>
+    <div data-appret-part="menu.checkbox">Word wrap</div>
+    <div data-appret-part="menu.item">Paste</div>
+  </div>
+</appret-menu>
+<p>
+  Last activated: <output id="menu-events-activated">none yet</output><br />
+  Close requested: <output id="menu-events-closed">not yet</output>
+</p>
+
+<script>
+  import "appret/define/menu";
+
+  const menu = document.querySelector<HTMLElementTagNameMap["appret-menu"]>("#menu-events")!;
+  const activated = document.querySelector("#menu-events-activated")!;
+  const closed = document.querySelector("#menu-events-closed")!;
+
+  document.querySelector("#menu-events-first")!.addEventListener("click", () => menu.focusFirst());
+  document.querySelector("#menu-events-last")!.addEventListener("click", () => menu.focusLast());
+
+  menu.addEventListener("appret-menu-activate", (event) => {
+    const { item, checked } = event.detail;
+    activated.textContent =
+      checked === undefined
+        ? `${item.textContent}`
+        : `${item.textContent} (${checked ? "checked" : "unchecked"})`;
+  });
+
+  menu.addEventListener("appret-menu-close", (event) => {
+    closed.textContent = event.detail.reason;
+  });
+</script>

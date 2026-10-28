@@ -1,0 +1,98 @@
+---
+title: <appret-menu>
+description: A menu from HTML, with no JavaScript to write.
+---
+
+import { Code } from "@astrojs/starlight/components";
+import Demo from "../../../components/Demo.astro";
+
+import Basic from "../../../examples/menu-element/basic.astro";
+import basicSource from "../../../examples/menu-element/basic.astro?raw";
+import Attributes from "../../../examples/menu-element/attributes.astro";
+import attributesSource from "../../../examples/menu-element/attributes.astro?raw";
+import Checkable from "../../../examples/menu-element/checkable.astro";
+import checkableSource from "../../../examples/menu-element/checkable.astro?raw";
+import Events from "../../../examples/menu-element/events.astro";
+import eventsSource from "../../../examples/menu-element/events.astro?raw";
+
+`<appret-menu>` is a custom element that wraps your HTML and makes it a menu following the [WAI-ARIA menu pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/) using the [Apprêt menu controller](/controllers/menu/). It finds its parts in your markup from `data-appret-part` attributes. It adds no styles and no shadow DOM.
+
+:::note
+`<appret-menu>` handles the menu itself, not the button that opens it. If that's what you need, you're looking for the [menu button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/).
+:::
+
+<Demo><Basic /></Demo>
+
+## Usage
+
+Load the element once, from a CDN or with a bundler:
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/appret/dist/define/menu.js"></script>
+```
+
+```js
+import "appret/define/menu";
+```
+
+Then mark the parts of your markup:
+
+<Code code={basicSource} lang="astro" />
+
+## Examples
+
+### Attributes
+
+<Demo><Attributes /></Demo>
+<Code code={attributesSource} lang="astro" />
+
+### Checkbox and radio items
+
+`menu.checkbox` and `menu.radio` items keep an `aria-checked` state. Radio items in the same `menu.group` form one set.
+
+A `menu.group-label` labels its group. Give it an `id` to label the group with `aria-labelledby`. Without an `id`, the group is labelled through element references.
+
+<Demo><Checkable /></Demo>
+<Code code={checkableSource} lang="astro" />
+
+### Focus and events
+
+`focusFirst()` and `focusLast()` move focus into the menu.
+
+<Demo><Events /></Demo>
+<Code code={eventsSource} lang="astro" />
+
+## Reference
+
+### Parts
+
+| `data-appret-part` | |
+| --- | --- |
+| `menu.menu` | Items container. |
+| `menu.item` | An item that runs an action when activated. |
+| `menu.checkbox` | An item with an on/off state. |
+| `menu.radio` | An item checked among the radio items of its group. |
+| `menu.group` | A group of items. Optional. |
+| `menu.group-label` | The label of a group. Optional. |
+| `menu.separator` | A separator between items. Optional. |
+
+### Attributes
+
+| Attribute | Type | Default | |
+| --- | --- | --- | --- |
+| `label` | `string` | | Accessible name of the menu. |
+| `labelledby` | `string` | | Space-separated IDs of elements labelling the menu. |
+| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` | |
+| `loop` | `boolean` | `true` | Whether keyboard navigation wraps around at the ends. |
+
+### Methods
+
+| | |
+| --- | --- |
+| `focus()` | Moves focus to the item currently reachable with <kbd>Tab</kbd>. |
+| `focusFirst()` | Moves focus to the first item. |
+| `focusLast()` | Moves focus to the last item. |
+
+## WAI-ARIA pattern
+
+Keyboard support follows the [WAI-ARIA menu pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menubar/), as described for the [menu controller](/controllers/menu/).
