@@ -1,4 +1,8 @@
-import { enumAttribute, HTMLElementBase } from "../shared/element.js";
+import {
+  closestElementOfType,
+  enumAttribute,
+  HTMLElementBase,
+} from "../shared/element.js";
 import { TabsController, type TabsControllerConfig } from "./controller.js";
 
 type TabsParts = Pick<TabsControllerConfig, "tabs" | "panels"> & {
@@ -151,7 +155,7 @@ export class TabsElement extends HTMLElementBase {
   #getParts() {
     const getOwnElements = (selector: string) => {
       return [...this.querySelectorAll<HTMLElement>(selector)].filter(
-        (el) => el.closest(this.localName) === this,
+        (el) => closestElementOfType(el, TabsElement) === this,
       );
     };
 

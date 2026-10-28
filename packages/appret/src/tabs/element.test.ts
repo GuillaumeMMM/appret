@@ -153,6 +153,37 @@ describe("setup", () => {
     expect(parts(inner).tabs.map((t) => t.getAttribute("role"))).toEqual(["tab", "tab"]);
     expect(parts(inner).list.getAttribute("aria-label")).toBe("Inner");
   });
+
+  it("only manages its own parts when the nested tab set has another tag name", () => {
+    defineElement("nested-tabs", class extends TabsElement {});
+    const element = mount(
+      markup(["Outer one", "Outer two"]).replace(
+        "Outer one panel",
+        markup(["Inner one", "Inner two"], 'label="Inner"').replaceAll(
+          "appret-tabs",
+          "nested-tabs",
+        ),
+      ),
+    );
+    const inner = element.querySelector("nested-tabs")!;
+    const innerTabs = [
+      ...inner.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.tab"]'),
+    ];
+    const outerTabs = [
+      ...element.querySelectorAll<HTMLElement>('[data-appret-part~="tabs.tab"]'),
+    ].filter((tab) => !innerTabs.includes(tab));
+
+    outerTabs[1]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(outerTabs[0]);
+
+    innerTabs[0]!.focus();
+    press("ArrowRight");
+    expect(document.activeElement).toBe(innerTabs[1]);
+    expect(
+      inner.querySelector('[data-appret-part~="tabs.list"]')!.getAttribute("aria-label"),
+    ).toBe("Inner");
+  });
 });
 
 describe("attributes", () => {

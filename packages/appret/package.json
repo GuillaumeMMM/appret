@@ -39,6 +39,11 @@
       "appret:source": "./src/define/listbox.ts",
       "types": "./dist/define/listbox.d.ts",
       "default": "./dist/define/listbox.js"
+    },
+    "./define/menu": {
+      "appret:source": "./src/define/menu.ts",
+      "types": "./dist/define/menu.d.ts",
+      "default": "./dist/define/menu.js"
     }
   },
   "scripts": {

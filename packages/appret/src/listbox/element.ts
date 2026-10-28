@@ -1,4 +1,8 @@
-import { enumAttribute, HTMLElementBase } from "../shared/element.js";
+import {
+  closestElementOfType,
+  enumAttribute,
+  HTMLElementBase,
+} from "../shared/element.js";
 import {
   ListboxController,
   type ListboxControllerConfig,
@@ -154,25 +158,26 @@ export class ListboxElement extends HTMLElementBase {
   }
 
   #getParts(): ListboxParts {
-    const getOwnElements = (selector: string) => {
-      return [...this.querySelectorAll<HTMLElement>(selector)].filter(
-        (el) => el.closest(this.localName) === this,
+    //  The parts of this listbox, and not of a nested one, whatever its tag name
+    const getOwnElements = (selector: string, root: Element = this) => {
+      return [...root.querySelectorAll<HTMLElement>(selector)].filter(
+        (el) => closestElementOfType(el, ListboxElement) === this,
       );
     };
 
     const groups = getOwnElements('[data-appret-part~="listbox.group"]');
     const options: HTMLElement[] | ListboxGroup[] = groups.length
       ? groups.map((group) => {
-          const label = group.querySelector<HTMLElement>(
+          const label = getOwnElements(
             '[data-appret-part~="listbox.group-label"]',
-          );
+            group,
+          )[0];
           return {
             group,
-            options: [
-              ...group.querySelectorAll<HTMLElement>(
-                '[data-appret-part~="listbox.option"]',
-              ),
-            ],
+            options: getOwnElements(
+              '[data-appret-part~="listbox.option"]',
+              group,
+            ),
             label: label ? { byElements: [label] } : undefined,
           };
         })
@@ -246,7 +251,10 @@ export class ListboxElement extends HTMLElementBase {
 }
 
 //  The list, then each group with its label and options, in order
-function partElements({ list, options }: ListboxParts): (Element | undefined)[] {
+function partElements({
+  list,
+  options,
+}: ListboxParts): (Element | undefined)[] {
   return [
     list,
     ...options.flatMap((o) =>

@@ -196,6 +196,58 @@ describe("setup", () => {
     expect(parts(inner).options.map((o) => o.getAttribute("role"))).toEqual(["option", "option"]);
     expect(parts(inner).list.getAttribute("aria-label")).toBe("Inner");
   });
+
+  it("only manages its own parts when the nested listbox has another tag name", () => {
+    defineElement("nested-listbox", class extends ListboxElement {});
+    const element = mount(
+      markup(["Outer"]).replace(
+        "</ul>",
+        `<li>${markup(["Inner one", "Inner two"], 'label="Inner"').replaceAll(
+          "appret-listbox",
+          "nested-listbox",
+        )}</li></ul>`,
+      ),
+    );
+    const inner = element.querySelector("nested-listbox")!;
+    const innerOptions = [
+      ...inner.querySelectorAll<HTMLElement>('[data-appret-part~="listbox.option"]'),
+    ];
+    const outerOption = [
+      ...element.querySelectorAll<HTMLElement>('[data-appret-part~="listbox.option"]'),
+    ].find((option) => !innerOptions.includes(option))!;
+
+    outerOption.focus();
+    press("End");
+    expect(document.activeElement).toBe(outerOption);
+
+    innerOptions[0]!.focus();
+    press("End");
+    expect(document.activeElement).toBe(innerOptions[1]);
+  });
+
+  it("only manages its own options when a listbox is nested in one of its groups", () => {
+    defineElement("grouped-listbox", class extends ListboxElement {});
+    const element = mount(
+      groupsMarkup().replace(
+        '<li data-appret-part="listbox.option">Cake</li>',
+        `<li data-appret-part="listbox.option">Cake</li><li>${markup(["Inner"], 'label="Inner"').replaceAll(
+          "appret-listbox",
+          "grouped-listbox",
+        )}</li>`,
+      ),
+    );
+    const innerOption = element.querySelector<HTMLElement>(
+      'grouped-listbox [data-appret-part~="listbox.option"]',
+    )!;
+    const cake = [...element.querySelectorAll<HTMLElement>("li")].find(
+      (li) => li.textContent === "Cake",
+    )!;
+
+    cake.focus();
+    press("End");
+    expect(document.activeElement).toBe(cake);
+    expect(innerOption.getAttribute("role")).toBe("option");
+  });
 });
 
 describe("groups", () => {

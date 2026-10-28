@@ -21,3 +21,4 @@ export type {
   MenuCloseEvent,
   MenuCloseDetail,
 } from "./menu/controller.js";
+export { MenuElement } from "./menu/element.js";

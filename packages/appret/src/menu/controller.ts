@@ -548,7 +548,10 @@ export class MenuController {
     }
   }
 
-  focus(item: MenuItem | undefined = this.#focusableItem): void {
+  focus(
+    item: MenuItem | undefined = this.#focusableItem,
+    options?: FocusOptions,
+  ): void {
     if (this.#destroyed) {
       console.warn("Appret menu: focus() called after destroy().");
       return;
@@ -572,7 +575,7 @@ export class MenuController {
       }
 
       this.#setFocusableItem(matchItem);
-      matchItem.element.focus();
+      matchItem.element.focus(options);
     } else {
       console.warn("Appret menu: focused item is not in menu items", item);
     }

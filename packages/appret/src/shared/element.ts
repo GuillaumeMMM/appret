@@ -34,3 +34,21 @@ export function enumAttribute<T extends string>(
 
   return undefined;
 }
+
+//  The closest ancestor registered with the given class or one of its subclasses,
+//  whatever its tag name
+export function closestElementOfType(
+  node: Element,
+  type: CustomElementConstructor,
+): Element | null {
+  for (let el = node.parentElement; el; el = el.parentElement) {
+    const registered = customElements.get(el.localName);
+    if (
+      registered &&
+      (registered === type || registered.prototype instanceof type)
+    ) {
+      return el;
+    }
+  }
+  return null;
+}

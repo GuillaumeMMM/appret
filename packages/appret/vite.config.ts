@@ -7,6 +7,7 @@ const entries = {
   "menu/index": "src/menu/index.ts",
   "define/tabs": "src/define/tabs.ts",
   "define/listbox": "src/define/listbox.ts",
+  "define/menu": "src/define/menu.ts",
 };
 
 export default defineConfig({

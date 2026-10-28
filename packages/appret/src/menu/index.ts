@@ -7,3 +7,4 @@ export type {
   MenuCloseEvent,
   MenuCloseDetail,
 } from "./controller.js";
+export { MenuElement } from "./element.js";
