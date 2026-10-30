@@ -1,0 +1,22 @@
+---
+title: Menu button
+description: A button that opens a menu, on your own markup.
+draft: true
+---
+
+import { Code } from "@astrojs/starlight/components";
+import Demo from "../../../components/Demo.astro";
+
+import Basic from "../../../examples/menu-button/basic.astro";
+import basicSource from "../../../examples/menu-button/basic.astro?raw";
+
+`MenuButtonController` turns your own button into a button that opens a menu, following the
+[WAI-ARIA menu button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/).
+
+<Demo><Basic /></Demo>
+
+## Usage
+
+Pass a host element, the button and the menu. Pass a [`MenuController`](/controllers/menu/) too, to move focus into the menu and close it with the menu's keys.
+
+<Code code={basicSource} lang="astro" />

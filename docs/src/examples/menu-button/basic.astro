@@ -1,0 +1,25 @@
+<div id="menu-button-basic">
+  <button class="button">Edit</button>
+  <div class="menu">
+    <div>Copy</div>
+    <div>Cut</div>
+    <div>Paste</div>
+  </div>
+</div>
+
+<script>
+  import { MenuController } from "appret/menu";
+  import { MenuButtonController } from "appret/menu-button";
+
+  const host = document.querySelector<HTMLElement>("#menu-button-basic")!;
+  const button = host.querySelector<HTMLElement>(".button")!;
+  const menu = host.querySelector<HTMLElement>(".menu")!;
+
+  const menuController = new MenuController(host, {
+    menu,
+    items: [...menu.querySelectorAll<HTMLElement>(":scope > div")],
+    label: "Edit",
+  });
+
+  new MenuButtonController(host, { button, menu, menuController });
+</script>

@@ -30,6 +30,11 @@
       "types": "./dist/menu/index.d.ts",
       "default": "./dist/menu/index.js"
     },
+    "./menu-button": {
+      "appret:source": "./src/menu-button/index.ts",
+      "types": "./dist/menu-button/index.d.ts",
+      "default": "./dist/menu-button/index.js"
+    },
     "./define/tabs": {
       "appret:source": "./src/define/tabs.ts",
       "types": "./dist/define/tabs.d.ts",

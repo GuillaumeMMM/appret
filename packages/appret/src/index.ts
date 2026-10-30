@@ -22,3 +22,9 @@ export type {
   MenuCloseDetail,
 } from "./menu/controller.js";
 export { MenuElement } from "./menu/element.js";
+export { MenuButtonController } from "./menu-button/controller.js";
+export type {
+  MenuButtonControllerConfig,
+  MenuButtonChangeDetail,
+  MenuButtonChangeEvent,
+} from "./menu-button/controller.js";

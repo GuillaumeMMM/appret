@@ -47,6 +47,10 @@
   gap: 0.25rem;
 }
 
+.sl-markdown-content [role="menu"][hidden] {
+  display: none;
+}
+
 .sl-markdown-content [role="menu"][aria-orientation="horizontal"] {
   flex-direction: row;
 }
